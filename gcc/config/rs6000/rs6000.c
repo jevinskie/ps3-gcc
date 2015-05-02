@@ -1230,6 +1230,13 @@ static bool rs6000_save_toc_in_prologue_p (void);
 static void rs6000_code_end (void) ATTRIBUTE_UNUSED;
 static void rs6000_set_up_by_prologue (struct hard_reg_set_container *);
 
+
+#ifdef POWERPC_CELL64LV2
+
+static bool rs6000_cell64lv2_valid_pointer_mode(enum machine_mode);
+
+#endif
+
 /* Hash table stuff for keeping track of TOC entries.  */
 
 struct GTY(()) toc_hash_struct
@@ -27961,6 +27968,20 @@ rs6000_set_up_by_prologue (struct hard_reg_set_container *set)
     add_to_hard_reg_set (&set->set, Pmode, RS6000_PIC_OFFSET_TABLE_REGNUM);
 }
 
+#ifdef POWERPC_CELL64LV2
+#undef TARGET_VALID_POINTER_MODE
+#define TARGET_VALID_POINTER_MODE rs6000_cell64lv2_valid_pointer_mode
+#endif
+
 struct gcc_target targetm = TARGET_INITIALIZER;
+
+#ifdef POWERPC_CELL64LV2
+
+static bool rs6000_cell64lv2_valid_pointer_mode(enum machine_mode mode)
+{
+	return (mode == SImode || (TARGET_64BIT && mode == DImode) || mode == ptr_mode || mode == Pmode);
+}
+
+#endif
 
 #include "gt-rs6000.h"
