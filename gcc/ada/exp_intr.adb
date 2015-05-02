@@ -27,7 +27,7 @@ with Atree;    use Atree;
 with Checks;   use Checks;
 with Einfo;    use Einfo;
 with Elists;   use Elists;
-with Errout;   use Errout;
+with Expander; use Expander;
 with Exp_Atag; use Exp_Atag;
 with Exp_Ch4;  use Exp_Ch4;
 with Exp_Ch7;  use Exp_Ch7;
@@ -247,7 +247,7 @@ package body Exp_Intr is
 
             declare
                Fname : constant Node_Id :=
-                         New_Reference_To (RTE (RE_Secondary_Tag), Loc);
+                         New_Occurrence_Of (RTE (RE_Secondary_Tag), Loc);
 
             begin
                pragma Assert (not Is_Interface (Etype (Tag_Arg)));
@@ -256,13 +256,13 @@ package body Exp_Intr is
                  Make_Object_Declaration (Loc,
                    Defining_Identifier => Make_Temporary (Loc, 'V'),
                    Object_Definition   =>
-                     New_Reference_To (RTE (RE_Tag), Loc),
+                     New_Occurrence_Of (RTE (RE_Tag), Loc),
                    Expression          =>
                      Make_Function_Call (Loc,
                        Name                   => Fname,
                        Parameter_Associations => New_List (
                          Relocate_Node (Tag_Arg),
-                         New_Reference_To
+                         New_Occurrence_Of
                            (Node (First_Elmt (Access_Disp_Table
                                                (Etype (Etype (Act_Constr))))),
                             Loc))));
@@ -324,7 +324,7 @@ package body Exp_Intr is
             Build_CW_Membership (Loc,
               Obj_Tag_Node => Obj_Tag_Node,
               Typ_Tag_Node =>
-                New_Reference_To (
+                New_Occurrence_Of (
                    Node (First_Elmt (Access_Disp_Table (
                                        Root_Type (Result_Typ)))), Loc),
               Related_Nod => N,
@@ -354,7 +354,7 @@ package body Exp_Intr is
                         Prefix         => New_Copy_Tree (Tag_Arg),
                         Attribute_Name => Name_Address),
 
-                      New_Reference_To (
+                      New_Occurrence_Of (
                         Node (First_Elmt (Access_Disp_Table (
                                             Root_Type (Result_Typ)))), Loc)))),
              Then_Statements =>
@@ -421,7 +421,7 @@ package body Exp_Intr is
                   New_Occurrence_Of (Choice_Parameter (P), Loc))));
             exit;
 
-         --  Keep climbing!
+         --  Keep climbing
 
          else
             P := Parent (P);
@@ -518,11 +518,9 @@ package body Exp_Intr is
       elsif Nam = Name_Generic_Dispatching_Constructor then
          Expand_Dispatching_Constructor_Call (N);
 
-      elsif Nam = Name_Import_Address
-              or else
-            Nam = Name_Import_Largest_Value
-              or else
-            Nam = Name_Import_Value
+      elsif Nam_In (Nam, Name_Import_Address,
+                         Name_Import_Largest_Value,
+                         Name_Import_Value)
       then
          Expand_Import_Call (N);
 
@@ -556,10 +554,10 @@ package body Exp_Intr is
       elsif Nam = Name_To_Pointer then
          Expand_To_Pointer (N);
 
-      elsif Nam = Name_File
-        or else Nam = Name_Line
-        or else Nam = Name_Source_Location
-        or else Nam = Name_Enclosing_Entity
+      elsif Nam_In (Nam, Name_File,
+                         Name_Line,
+                         Name_Source_Location,
+                         Name_Enclosing_Entity)
       then
          Expand_Source_Info (N, Nam);
 
@@ -646,7 +644,7 @@ package body Exp_Intr is
 
    --  As a result, whenever a shift is used in the source program, it will
    --  remain as a call until converted by this routine to the operator node
-   --  form which Gigi is expecting to see.
+   --  form which the back end is expecting to see.
 
    --  Note: it is possible for the expander to generate shift operator nodes
    --  directly, which will be analyzed in the normal manner by calling Analyze
@@ -684,8 +682,15 @@ package body Exp_Intr is
          Rewrite (N, Snode);
          Set_Analyzed (N);
 
-      else
+         --  However, we do call the expander, so that the expansion for
+         --  rotates and shift_right_arithmetic happens if Modify_Tree_For_C
+         --  is set.
 
+         if Expander_Active then
+            Expand (N);
+         end if;
+
+      else
          --  If the context type is not the type of the operator, it is an
          --  inherited operator for a derived type. Wrap the node in a
          --  conversion so that it is type-consistent for possible further
@@ -750,7 +755,7 @@ package body Exp_Intr is
 
          --  Loop to output the name
 
-         --  is this right wrt wide char encodings ??? (no!)
+         --  This is not right wrt wide char encodings ??? ()
 
          SDef := Sloc (E);
          while TDef (SDef) in '0' .. '9'
@@ -1021,39 +1026,12 @@ package body Exp_Intr is
       --  For a task type, call Free_Task before freeing the ATCB
 
       if Is_Task_Type (Desig_T) then
-         declare
-            Stat : Node_Id := Prev (N);
-            Nam1 : Node_Id;
-            Nam2 : Node_Id;
 
-         begin
-            --  An Abort followed by a Free will not do what the user expects,
-            --  because the abort is not immediate. This is worth a warning.
-
-            while Present (Stat)
-              and then not Comes_From_Source (Original_Node (Stat))
-            loop
-               Prev (Stat);
-            end loop;
-
-            if Present (Stat)
-              and then Nkind (Original_Node (Stat)) = N_Abort_Statement
-            then
-               Stat := Original_Node (Stat);
-               Nam1 := First (Names (Stat));
-               Nam2 := Original_Node (First (Parameter_Associations (N)));
-
-               if Nkind (Nam1) = N_Explicit_Dereference
-                 and then Is_Entity_Name (Prefix (Nam1))
-                 and then Is_Entity_Name (Nam2)
-                 and then Entity (Prefix (Nam1)) = Entity (Nam2)
-               then
-                  Error_Msg_N ("abort may take time to complete??", N);
-                  Error_Msg_N ("\deallocation might have no effect??", N);
-                  Error_Msg_N ("\safer to wait for termination??", N);
-               end if;
-            end if;
-         end;
+         --  We used to detect the case of Abort followed by a Free here,
+         --  because the Free wouldn't actually free if it happens before
+         --  the aborted task actually terminates. The warning was removed,
+         --  because Free now works properly (the task will be freed once
+         --  it terminates).
 
          Append_To
            (Stmts, Cleanup_Task (N, Duplicate_Subexpr_No_Checks (Arg)));
@@ -1215,7 +1193,7 @@ package body Exp_Intr is
          Set_Expression (Free_Node,
            Unchecked_Convert_To (Typ,
              Make_Function_Call (Loc,
-               Name => New_Reference_To (RTE (RE_Base_Address), Loc),
+               Name => New_Occurrence_Of (RTE (RE_Base_Address), Loc),
                Parameter_Associations => New_List (
                  Unchecked_Convert_To (RTE (RE_Address), Free_Arg)))));
 

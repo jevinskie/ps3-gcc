@@ -171,6 +171,26 @@ package body Makeutl is
       end;
    end Absolute_Path;
 
+   ----------------------------
+   -- Aggregate_Libraries_In --
+   ----------------------------
+
+   function Aggregate_Libraries_In (Tree : Project_Tree_Ref) return Boolean is
+      List : Project_List;
+
+   begin
+      List := Tree.Projects;
+      while List /= null loop
+         if List.Project.Qualifier = Aggregate_Library then
+            return True;
+         end if;
+
+         List := List.Next;
+      end loop;
+
+      return False;
+   end Aggregate_Libraries_In;
+
    -------------------------
    -- Base_Name_Index_For --
    -------------------------
@@ -369,12 +389,12 @@ package body Makeutl is
       Status : Boolean;
       --  For call to Close
 
-      Iter : Source_Iterator :=
-        For_Each_Source
-          (In_Tree           => Project_Tree,
-           Language          => Name_Ada,
-           Encapsulated_Libs => False,
-           Locally_Removed   => False);
+      Iter : Source_Iterator := For_Each_Source
+                                  (In_Tree           => Project_Tree,
+                                   Language          => Name_Ada,
+                                   Encapsulated_Libs => False,
+                                   Locally_Removed   => False);
+
       Source : Prj.Source_Id;
 
    begin
@@ -390,7 +410,10 @@ package body Makeutl is
 
             Unit := Source.Unit;
 
-            if Unit = No_Unit_Index or else Unit.Name = No_Name then
+            if Source.Replaced_By /= No_Source
+              or else Unit = No_Unit_Index
+              or else Unit.Name = No_Name
+            then
                ALI_Name := No_File;
 
             --  If this is a body, put it in the mapping
@@ -431,13 +454,14 @@ package body Makeutl is
             --  found.
 
             if ALI_Name /= No_File then
+
                --  Look in the project and the projects that are extending it
                --  to find the real ALI file.
 
                declare
-                  ALI : constant String := Get_Name_String (ALI_Name);
+                  ALI      : constant String := Get_Name_String (ALI_Name);
+                  ALI_Path : Name_Id         := No_Name;
 
-                  ALI_Path : Name_Id := No_Name;
                begin
                   loop
                      --  For library projects, use the library ALI directory,
@@ -462,6 +486,7 @@ package body Makeutl is
                   end loop;
 
                   if ALI_Path /= No_Name then
+
                      --  First line is the unit name
 
                      Get_Name_String (ALI_Unit);
@@ -475,7 +500,7 @@ package body Makeutl is
 
                      exit when not OK;
 
-                     --  Second line it the ALI file name
+                     --  Second line is the ALI file name
 
                      Get_Name_String (ALI_Name);
                      Add_Char_To_Name_Buffer (ASCII.LF);
@@ -488,7 +513,7 @@ package body Makeutl is
 
                      exit when not OK;
 
-                     --  Third line it the ALI path name
+                     --  Third line is the ALI path name
 
                      Get_Name_String (ALI_Path);
                      Add_Char_To_Name_Buffer (ASCII.LF);
@@ -576,8 +601,9 @@ package body Makeutl is
                if Sw'Length >= 3
                  and then (Sw (2) = 'I'
                             or else (not For_Gnatbind
-                                       and then (Sw (2) = 'L'
-                                         or else Sw (2) = 'A')))
+                                      and then (Sw (2) = 'L'
+                                                 or else
+                                                Sw (2) = 'A')))
                then
                   Start := 3;
 
@@ -592,7 +618,7 @@ package body Makeutl is
                              or else
                            Sw (2 .. 3) = "aI"
                              or else
-                           (For_Gnatbind and then Sw (2 .. 3) = "A="))
+                               (For_Gnatbind and then Sw (2 .. 3) = "A="))
                then
                   Start := 4;
 
@@ -1250,56 +1276,56 @@ package body Makeutl is
          Obj_Proj := Source.Project;
 
          while Obj_Proj /= No_Project loop
-            declare
-               Dir  : constant String :=
-                        Get_Name_String
-                          (Obj_Proj.Object_Directory.Display_Name);
+            if Obj_Proj.Object_Directory /= No_Path_Information then
+               declare
+                  Dir : constant String :=
+                    Get_Name_String (Obj_Proj.Object_Directory.Display_Name);
 
-               Object_Path : constant String :=
-                               Normalize_Pathname
-                                 (Name          =>
-                                    Get_Name_String (Source.Object),
-                                  Resolve_Links => Opt.Follow_Links_For_Files,
-                                  Directory     => Dir);
+                  Object_Path : constant String :=
+                    Normalize_Pathname
+                      (Name          => Get_Name_String (Source.Object),
+                       Resolve_Links => Opt.Follow_Links_For_Files,
+                       Directory     => Dir);
 
-               Obj_Path : constant Path_Name_Type := Create_Name (Object_Path);
-               Stamp    : Time_Stamp_Type := Empty_Time_Stamp;
+                  Obj_Path : constant Path_Name_Type :=
+                    Create_Name (Object_Path);
 
-            begin
-               --  For specs, we do not check object files if there is a body.
-               --  This saves a system call. On the other hand, we do need to
-               --  know the object_path, in case the user has passed the .ads
-               --  on the command line to compile the spec only.
+                  Stamp : Time_Stamp_Type := Empty_Time_Stamp;
 
-               if Source.Kind /= Spec
-                 or else Source.Unit = No_Unit_Index
-                 or else Source.Unit.File_Names (Impl) = No_Source
-               then
-                  Stamp := File_Stamp (Obj_Path);
-               end if;
+               begin
+                  --  For specs, we do not check object files if there is a
+                  --  body. This saves a system call. On the other hand, we do
+                  --  need to know the object_path, in case the user has passed
+                  --  the .ads on the command line to compile the spec only.
 
-               if Stamp /= Empty_Time_Stamp
-                 or else (Obj_Proj.Extended_By = No_Project
-                          and then Source.Object_Project = No_Project)
-               then
-                  Set_Object_Project (Dir, Obj_Proj, Obj_Path, Stamp);
-               end if;
+                  if Source.Kind /= Spec
+                    or else Source.Unit = No_Unit_Index
+                    or else Source.Unit.File_Names (Impl) = No_Source
+                  then
+                     Stamp := File_Stamp (Obj_Path);
+                  end if;
 
-               Obj_Proj := Obj_Proj.Extended_By;
-            end;
+                  if Stamp /= Empty_Time_Stamp
+                    or else (Obj_Proj.Extended_By = No_Project
+                              and then Source.Object_Project = No_Project)
+                  then
+                     Set_Object_Project (Dir, Obj_Proj, Obj_Path, Stamp);
+                  end if;
+               end;
+            end if;
+
+            Obj_Proj := Obj_Proj.Extended_By;
          end loop;
 
       elsif Source.Language.Config.Dependency_Kind = Makefile then
          declare
             Object_Dir : constant String :=
-                           Get_Name_String
-                             (Source.Project.Object_Directory.Display_Name);
+              Get_Name_String (Source.Project.Object_Directory.Display_Name);
             Dep_Path   : constant String :=
-                           Normalize_Pathname
-                             (Name        => Get_Name_String (Source.Dep_Name),
-                              Resolve_Links =>
-                                Opt.Follow_Links_For_Files,
-                              Directory     => Object_Dir);
+              Normalize_Pathname
+                (Name          => Get_Name_String (Source.Dep_Name),
+                 Resolve_Links => Opt.Follow_Links_For_Files,
+                 Directory     => Object_Dir);
          begin
             Source.Dep_Path := Create_Name (Dep_Path);
             Source.Dep_TS   := Osint.Unknown_Attributes;
@@ -1317,8 +1343,8 @@ package body Makeutl is
      (Env  : Prj.Tree.Environment;
       Argv : String) return Boolean
    is
-      Start     : Positive := 3;
-      Finish    : Natural := Argv'Last;
+      Start  : Positive := 3;
+      Finish : Natural := Argv'Last;
 
       pragma Assert (Argv'First = 1);
       pragma Assert (Argv (1 .. 2) = "-X");
@@ -1648,9 +1674,11 @@ package body Makeutl is
                      end if;
                   end if;
 
-               elsif Source.Kind = Spec then
-                  --  A spec needs to be taken into account unless there is
-                  --  also a body. So we delay the decision for them.
+               elsif Source.Kind = Spec
+                 and then Source.Language.Config.Kind = Unit_Based
+               then
+                  --  An Ada spec needs to be taken into account unless there
+                  --  is also a body. So we delay the decision for them.
 
                   Get_Name_String (Source.File);
 
@@ -1779,7 +1807,7 @@ package body Makeutl is
 
                         if Source = No_Source then
                            Source := Find_File_Add_Extension
-                             (Tree, Get_Name_String (Main_Id));
+                             (File.Tree, Get_Name_String (Main_Id));
                         end if;
 
                         if Is_Absolute
@@ -1846,10 +1874,10 @@ package body Makeutl is
                            --  reported later.
 
                            Error_Msg_File_1 := Main_Id;
-                           Error_Msg_Name_1 := Root_Project.Name;
+                           Error_Msg_Name_1 := File.Project.Name;
                            Prj.Err.Error_Msg
                              (Flags, "{ is not a source of project %%",
-                              File.Location, Project);
+                              File.Location, File.Project);
                         end if;
                      end if;
                   end;
@@ -2477,6 +2505,24 @@ package body Makeutl is
 
          if Was_Processed (Source) then
             return False;
+         end if;
+
+         --  For gprbuild, check if a source has already been inserted in the
+         --  queue from the same project in a different project tree.
+
+         if Source.Format = Format_Gprbuild then
+            for J in 1 .. Q.Last loop
+               if Source.Id.Path.Name = Q.Table (J).Info.Id.Path.Name
+                 and then Source.Id.Index = Q.Table (J).Info.Id.Index
+                 and then Source.Id.Project.Path.Name =
+                          Q.Table (J).Info.Id.Project.Path.Name
+               then
+                  --  No need to insert this source in the queue, but still
+                  --  return True as we may need to insert its roots.
+
+                  return True;
+               end if;
+            end loop;
          end if;
 
          if Current_Verbosity = High then

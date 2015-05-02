@@ -34,13 +34,6 @@ struct hfa_fx2_t
   float b;
 };
 
-struct hfa_fx3_t
-{
-  float a;
-  float b;
-  float c;
-};
-
 struct hfa_dx2_t
 {
   double a;

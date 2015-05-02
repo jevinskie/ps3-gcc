@@ -107,17 +107,10 @@
   "isync"
   [(set_attr "type" "isync")])
 
-;; Types that we should provide atomic instructions for.
-(define_mode_iterator AINT [QI
-			    HI
-			    SI
-			    (DI "TARGET_POWERPC64")
-			    (TI "TARGET_SYNC_TI")])
-
 ;; The control dependency used for load dependency described
 ;; in B.2.3 of the Power ISA 2.06B.
 (define_insn "loadsync_<mode>"
-  [(unspec_volatile:BLK [(match_operand:AINT 0 "register_operand" "r")]
+  [(unspec_volatile:BLK [(match_operand:INT1 0 "register_operand" "r")]
 			UNSPECV_ISYNC)
    (clobber (match_scratch:CC 1 "=y"))]
   ""
@@ -125,73 +118,18 @@
   [(set_attr "type" "isync")
    (set_attr "length" "12")])
 
-(define_insn "load_quadpti"
-  [(set (match_operand:PTI 0 "quad_int_reg_operand" "=&r")
-	(unspec:PTI
-	 [(match_operand:TI 1 "quad_memory_operand" "wQ")] UNSPEC_LSQ))]
-  "TARGET_SYNC_TI
-   && !reg_mentioned_p (operands[0], operands[1])"
-  "lq %0,%1"
-  [(set_attr "type" "load")
-   (set_attr "length" "4")])
-
 (define_expand "atomic_load<mode>"
-  [(set (match_operand:AINT 0 "register_operand" "")		;; output
-	(match_operand:AINT 1 "memory_operand" ""))		;; memory
+  [(set (match_operand:INT1 0 "register_operand" "")		;; output
+	(match_operand:INT1 1 "memory_operand" ""))		;; memory
    (use (match_operand:SI 2 "const_int_operand" ""))]		;; model
   ""
 {
-  if (<MODE>mode == TImode && !TARGET_SYNC_TI)
-    FAIL;
-
   enum memmodel model = (enum memmodel) INTVAL (operands[2]);
 
   if (model == MEMMODEL_SEQ_CST)
     emit_insn (gen_hwsync ());
 
-  if (<MODE>mode != TImode)
-    emit_move_insn (operands[0], operands[1]);
-  else
-    {
-      rtx op0 = operands[0];
-      rtx op1 = operands[1];
-      rtx pti_reg = gen_reg_rtx (PTImode);
-
-      // Can't have indexed address for 'lq'
-      if (indexed_address (XEXP (op1, 0), TImode))
-	{
-	  rtx old_addr = XEXP (op1, 0);
-	  rtx new_addr = force_reg (Pmode, old_addr);
-	  operands[1] = op1 = replace_equiv_address (op1, new_addr);
-	}
-
-      emit_insn (gen_load_quadpti (pti_reg, op1));
-
-      /* For 4.8 we need to do explicit dword copies, even in big endian mode,
-	 unless we are using the LRA register allocator. The 4.9 register
-	 allocator is smart enough to assign an even/odd pair. */
-      if (WORDS_BIG_ENDIAN && rs6000_lra_flag)
-	emit_move_insn (op0, gen_lowpart (TImode, pti_reg));
-      else
-	{
-	  rtx op0_lo = gen_lowpart (DImode, op0);
-	  rtx op0_hi = gen_highpart (DImode, op0);
-	  rtx pti_lo = gen_lowpart (DImode, pti_reg);
-	  rtx pti_hi = gen_highpart (DImode, pti_reg);
-
-	  emit_insn (gen_rtx_CLOBBER (VOIDmode, op0));
-	  if (WORDS_BIG_ENDIAN)
-	    {
-	      emit_move_insn (op0_hi, pti_hi);
-	      emit_move_insn (op0_lo, pti_lo);
-	    }
-	  else
-	    {
-	      emit_move_insn (op0_hi, pti_lo);
-	      emit_move_insn (op0_lo, pti_hi);
-	    }
-	}
-    }
+  emit_move_insn (operands[0], operands[1]);
 
   switch (model)
     {
@@ -208,24 +146,12 @@
   DONE;
 })
 
-(define_insn "store_quadpti"
-  [(set (match_operand:PTI 0 "quad_memory_operand" "=wQ")
-	(unspec:PTI
-	 [(match_operand:PTI 1 "quad_int_reg_operand" "r")] UNSPEC_LSQ))]
-  "TARGET_SYNC_TI"
-  "stq %1,%0"
-  [(set_attr "type" "store")
-   (set_attr "length" "4")])
-
 (define_expand "atomic_store<mode>"
-  [(set (match_operand:AINT 0 "memory_operand" "")		;; memory
-	(match_operand:AINT 1 "register_operand" ""))		;; input
+  [(set (match_operand:INT1 0 "memory_operand" "")		;; memory
+	(match_operand:INT1 1 "register_operand" ""))		;; input
    (use (match_operand:SI 2 "const_int_operand" ""))]		;; model
   ""
 {
-  if (<MODE>mode == TImode && !TARGET_SYNC_TI)
-    FAIL;
-
   enum memmodel model = (enum memmodel) INTVAL (operands[2]);
   switch (model)
     {
@@ -240,50 +166,7 @@
     default:
       gcc_unreachable ();
     }
-  if (<MODE>mode != TImode)
-    emit_move_insn (operands[0], operands[1]);
-  else
-    {
-      rtx op0 = operands[0];
-      rtx op1 = operands[1];
-      rtx pti_reg = gen_reg_rtx (PTImode);
-
-      // Can't have indexed address for 'stq'
-      if (indexed_address (XEXP (op0, 0), TImode))
-	{
-	  rtx old_addr = XEXP (op0, 0);
-	  rtx new_addr = force_reg (Pmode, old_addr);
-	  operands[0] = op0 = replace_equiv_address (op0, new_addr);
-	}
-
-      /* For 4.8 we need to do explicit dword copies, even in big endian mode,
-	 unless we are using the LRA register allocator. The 4.9 register
-	 allocator is smart enough to assign an even/odd pair. */
-      if (WORDS_BIG_ENDIAN && rs6000_lra_flag)
-	emit_move_insn (pti_reg, gen_lowpart (PTImode, op1));
-      else
-	{
-	  rtx op1_lo = gen_lowpart (DImode, op1);
-	  rtx op1_hi = gen_highpart (DImode, op1);
-	  rtx pti_lo = gen_lowpart (DImode, pti_reg);
-	  rtx pti_hi = gen_highpart (DImode, pti_reg);
-
-	  emit_insn (gen_rtx_CLOBBER (VOIDmode, pti_reg));
-	  if (WORDS_BIG_ENDIAN)
-	    {
-	      emit_move_insn (pti_hi, op1_hi);
-	      emit_move_insn (pti_lo, op1_lo);
-	    }
-	  else
-	    {
-	      emit_move_insn (pti_hi, op1_lo);
-	      emit_move_insn (pti_lo, op1_hi);
-	    }
-	}
-
-      emit_insn (gen_store_quadpti (gen_lowpart (PTImode, op0), pti_reg));
-    }
-
+  emit_move_insn (operands[0], operands[1]);
   DONE;
 })
 
@@ -296,6 +179,14 @@
 			      (HI "TARGET_SYNC_HI_QI")
 			      SI
 			      (DI "TARGET_POWERPC64")])
+
+;; Types that we should provide atomic instructions for.
+
+(define_mode_iterator AINT [QI
+			    HI
+			    SI
+			    (DI "TARGET_POWERPC64")
+			    (TI "TARGET_SYNC_TI")])
 
 (define_insn "load_locked<mode>"
   [(set (match_operand:ATOMIC 0 "int_reg_operand" "=r")
@@ -314,12 +205,9 @@
   [(set_attr "type" "load_l")])
 
 ;; Use PTImode to get even/odd register pairs.
-
 ;; Use a temporary register to force getting an even register for the
-;; lqarx/stqcrx. instructions.  Under AT 7.0, we need use an explicit copy,
-;; even in big endian mode, unless we are using the LRA register allocator.  In
-;; GCC 4.9, the register allocator is smart enough to assign a even/odd
-;; register pair.
+;; lqarx/stqcrx. instructions.  Normal optimizations will eliminate this extra
+;; copy on big endian systems.
 
 ;; On little endian systems where non-atomic quad word load/store instructions
 ;; are not used, the address can be register+offset, so make sure the address
@@ -342,26 +230,12 @@
     }
 
   emit_insn (gen_load_lockedpti (pti, op1));
-  if (WORDS_BIG_ENDIAN && rs6000_lra_flag)
+  if (WORDS_BIG_ENDIAN)
     emit_move_insn (op0, gen_lowpart (TImode, pti));
   else
     {
-      rtx op0_lo = gen_lowpart (DImode, op0);
-      rtx op0_hi = gen_highpart (DImode, op0);
-      rtx pti_lo = gen_lowpart (DImode, pti);
-      rtx pti_hi = gen_highpart (DImode, pti);
-
-      emit_insn (gen_rtx_CLOBBER (VOIDmode, op0));
-      if (WORDS_BIG_ENDIAN)
-	{
-	  emit_move_insn (op0_hi, pti_hi);
-	  emit_move_insn (op0_lo, pti_lo);
-	}
-      else
-	{
-	  emit_move_insn (op0_hi, pti_lo);
-	  emit_move_insn (op0_lo, pti_hi);
-	}
+      emit_move_insn (gen_lowpart (DImode, op0), gen_highpart (DImode, pti));
+      emit_move_insn (gen_highpart (DImode, op0), gen_lowpart (DImode, pti));
     }
   DONE;
 })
@@ -386,9 +260,8 @@
   [(set_attr "type" "store_c")])
 
 ;; Use a temporary register to force getting an even register for the
-;; lqarx/stqcrx. instructions.  Under AT 7.0, we need use an explicit copy,
-;; even in big endian mode.  In GCC 4.9, the register allocator is smart enough
-;; to assign a even/odd register pair.
+;; lqarx/stqcrx. instructions.  Normal optimizations will eliminate this extra
+;; copy on big endian systems.
 
 ;; On little endian systems where non-atomic quad word load/store instructions
 ;; are not used, the address can be register+offset, so make sure the address
@@ -417,26 +290,12 @@
   pti_mem = change_address (op1, PTImode, addr);
   pti_reg = gen_reg_rtx (PTImode);
 
-  if (WORDS_BIG_ENDIAN && rs6000_lra_flag)
+  if (WORDS_BIG_ENDIAN)
     emit_move_insn (pti_reg, gen_lowpart (PTImode, op2));
   else
     {
-      rtx op2_lo = gen_lowpart (DImode, op2);
-      rtx op2_hi = gen_highpart (DImode, op2);
-      rtx pti_lo = gen_lowpart (DImode, pti_reg);
-      rtx pti_hi = gen_highpart (DImode, pti_reg);
-
-      emit_insn (gen_rtx_CLOBBER (VOIDmode, op0));
-      if (WORDS_BIG_ENDIAN)
-	{
-	  emit_move_insn (pti_hi, op2_hi);
-	  emit_move_insn (pti_lo, op2_lo);
-	}
-      else
-	{
-	  emit_move_insn (pti_hi, op2_lo);
-	  emit_move_insn (pti_lo, op2_hi);
-	}
+      emit_move_insn (gen_lowpart (DImode, pti_reg), gen_highpart (DImode, op2));
+      emit_move_insn (gen_highpart (DImode, pti_reg), gen_lowpart (DImode, op2));
     }
 
   emit_insn (gen_store_conditionalpti (op0, pti_mem, pti_reg));

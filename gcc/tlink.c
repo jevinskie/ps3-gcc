@@ -1,7 +1,7 @@
 /* Scan linker error messages for missing template instantiations and provide
    them.
 
-   Copyright (C) 1995-2013 Free Software Foundation, Inc.
+   Copyright (C) 1995-2014 Free Software Foundation, Inc.
    Contributed by Jason Merrill (jason@cygnus.com).
 
 This file is part of GCC.
@@ -768,7 +768,7 @@ scan_linker_output (const char *fname)
 	     constructor or destructor, there can be several mangled names
 	     that match it, so choose or unchoose all of them.  If some are
 	     chosen and some not, leave the later ones that don't match
-	     alone for now; either this will cause the link to suceed, or
+	     alone for now; either this will cause the link to succeed, or
 	     on the next attempt we will switch all of them the other way
 	     and that will cause it to succeed.  */
 	  int chosen = 0;

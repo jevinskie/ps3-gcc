@@ -1,5 +1,5 @@
 /* Intrinsic function resolution.
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
    Contributed by Andy Vaught & Katherine Holcomb
 
 This file is part of GCC.
@@ -30,6 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tree.h"
+#include "stringpool.h"
 #include "gfortran.h"
 #include "intrinsic.h"
 #include "constructor.h"
@@ -497,6 +498,20 @@ gfc_resolve_btest (gfc_expr *f, gfc_expr *i, gfc_expr *pos)
   f->ts.kind = gfc_default_logical_kind;
   f->value.function.name
     = gfc_get_string ("__btest_%d_%d", i->ts.kind, pos->ts.kind);
+}
+
+
+void
+gfc_resolve_c_loc (gfc_expr *f, gfc_expr *x ATTRIBUTE_UNUSED)
+{
+  f->ts = f->value.function.isym->ts;
+}
+
+
+void
+gfc_resolve_c_funloc (gfc_expr *f, gfc_expr *x ATTRIBUTE_UNUSED)
+{
+  f->ts = f->value.function.isym->ts;
 }
 
 
@@ -2140,10 +2155,7 @@ gfc_resolve_reshape (gfc_expr *f, gfc_expr *source, gfc_expr *shape,
       break;
     }
 
-  /* TODO: Make this work with a constant ORDER parameter.  */
-  if (shape->expr_type == EXPR_ARRAY
-      && gfc_is_constant_expr (shape)
-      && order == NULL)
+  if (shape->expr_type == EXPR_ARRAY && gfc_is_constant_expr (shape))
     {
       gfc_constructor *c;
       f->shape = gfc_get_shape (f->rank);

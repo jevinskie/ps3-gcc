@@ -1,10 +1,20 @@
-2014-12-19  Release Manager
+2014-04-22  Release Manager
 
-	* GCC 4.8.4 released.
+	* GCC 4.9.0 released.
 
-2014-05-22  Release Manager
+2014-03-18  Joseph Myers  <joseph@codesourcery.com>
 
-	* GCC 4.8.3 released.
+	* de.po: Update.
+
+2014-03-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* be.po, ca.po, da.po, de.po, el.po, eo.po, es.po, fi.po, fr.po,
+	id.po, ja.po, nl.po, pr_BR.po, ru.po, sr.po, sv.po, tr.po, uk.po,
+	vi.po, zh_CN.po, zh_TW.po: Update.
+
+2014-02-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* cpplib.pot: Regenerate.
 
 2013-12-18  Joseph Myers  <joseph@codesourcery.com>
 
@@ -14,17 +24,9 @@
 
 	* tr.po: Update.
 
-2013-10-16  Release Manager
-
-	* GCC 4.8.2 released.
-
 2013-10-03  Joseph Myers  <joseph@codesourcery.com>
 
 	* sr.po: Update.
-
-2013-05-31  Release Manager
-
-	* GCC 4.8.1 released.
 
 2013-03-30  Joseph Myers  <joseph@codesourcery.com>
 
@@ -33,10 +35,6 @@
 2013-03-27  Joseph Myers  <joseph@codesourcery.com>
 
 	* zh_TW.po: Update.
-
-2013-03-22  Release Manager
-
-	* GCC 4.8.0 released.
 
 2013-03-15  Joseph Myers  <joseph@codesourcery.com>
 

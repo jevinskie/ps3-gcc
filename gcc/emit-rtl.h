@@ -1,5 +1,5 @@
 /* Exported functions from emit-rtl.c
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -19,9 +19,6 @@ along with GCC; see the file COPYING3.  If not see
 
 #ifndef GCC_EMIT_RTL_H
 #define GCC_EMIT_RTL_H
-
-/* Return whether two MEM_ATTRs are equal.  */
-bool mem_attrs_eq_p (const struct mem_attrs *, const struct mem_attrs *);
 
 /* Set the alias set of MEM to SET.  */
 extern void set_mem_alias_set (rtx, alias_set_type);
@@ -116,4 +113,7 @@ get_max_uid (void)
 {
   return crtl->emit.x_cur_insn_uid;
 }
+
+extern void set_decl_incoming_rtl (tree, rtx, bool);
+
 #endif /* GCC_EMIT_RTL_H */

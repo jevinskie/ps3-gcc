@@ -1,5 +1,5 @@
 /* Definitions of target machine for GNU compiler, Argonaut EPIPHANY cpu.
-   Copyright (C) 1994-2013 Free Software Foundation, Inc.
+   Copyright (C) 1994-2014 Free Software Foundation, Inc.
    Contributed by Embecosm on behalf of Adapteva, Inc.
 
 This file is part of GCC.
@@ -450,6 +450,7 @@ typedef struct GTY (()) machine_function
   unsigned pretend_args_odd : 1;
   unsigned lr_clobbered : 1;
   unsigned control_use_inserted : 1;
+  unsigned lr_slot_known : 1;
   unsigned sw_entities_processed : 6;
   long lr_slot_offset;
   rtx and_mask;
@@ -928,8 +929,10 @@ enum
 };
 
 extern int epiphany_normal_fp_rounding;
-extern struct rtl_opt_pass pass_mode_switch_use;
-extern struct rtl_opt_pass pass_resolve_sw_modes;
+#ifndef IN_LIBGCC2
+extern rtl_opt_pass *make_pass_mode_switch_use (gcc::context *ctxt);
+extern rtl_opt_pass *make_pass_resolve_sw_modes (gcc::context *ctxt);
+#endif
 
 /* This will need to be adjusted when FP_CONTRACT_ON is properly
    implemented.  */

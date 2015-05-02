@@ -8,7 +8,11 @@
 
 #include "toplev.h"
 #include "tree.h"
-#include "gimple.h"
+#include "stringpool.h"
+#include "stor-layout.h"
+#include "varasm.h"
+#include "gimple-expr.h"
+#include "gimplify.h"
 #include "tree-iterator.h"
 #include "cgraph.h"
 #include "langhooks.h"
@@ -751,7 +755,6 @@ sort_var_inits(Gogo* gogo, Var_inits* var_inits)
 void
 Gogo::write_globals()
 {
-  this->convert_named_types();
   this->build_interface_method_tables();
 
   Bindings* bindings = this->current_bindings();
@@ -2107,8 +2110,10 @@ Gogo::interface_method_table_for_type(const Interface_type* interface,
     td_type = type;
   else
     td_type = Type::make_pointer_type(type);
-  tree tdp = td_type->type_descriptor_pointer(this,
-                                              Linemap::predeclared_location());
+
+  Location loc = Linemap::predeclared_location();
+  Bexpression* tdp_bexpr = td_type->type_descriptor_pointer(this, loc);
+  tree tdp = expr_to_tree(tdp_bexpr);
   elt->value = fold_convert(const_ptr_type_node, tdp);
 
   Named_type* nt = type->named_type();
@@ -2243,30 +2248,6 @@ Gogo::call_builtin(tree* pdecl, Location location, const char* name,
   delete[] types;
   delete[] args;
 
-  return ret;
-}
-
-// Build a call to the runtime error function.
-
-tree
-Gogo::runtime_error(int code, Location location)
-{
-  Type* int32_type = Type::lookup_integer_type("int32");
-  tree int32_type_tree = type_to_tree(int32_type->get_backend(this));
-
-  static tree runtime_error_fndecl;
-  tree ret = Gogo::call_builtin(&runtime_error_fndecl,
-				location,
-				"__go_runtime_error",
-				1,
-				void_type_node,
-				int32_type_tree,
-				build_int_cst(int32_type_tree, code));
-  if (ret == error_mark_node)
-    return error_mark_node;
-  // The runtime error function panics and does not return.
-  TREE_NOTHROW(runtime_error_fndecl) = 0;
-  TREE_THIS_VOLATILE(runtime_error_fndecl) = 1;
   return ret;
 }
 

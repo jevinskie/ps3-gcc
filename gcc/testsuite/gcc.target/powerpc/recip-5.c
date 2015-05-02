@@ -5,9 +5,9 @@
 /* { dg-final { scan-assembler-times "xvredp" 4 } } */
 /* { dg-final { scan-assembler-times "xvresp" 5 } } */
 /* { dg-final { scan-assembler-times "xsredp\|fre\ " 2 } } */
-/* { dg-final { scan-assembler-times "xsresp\|fres" 2 } } */
-/* { dg-final { scan-assembler-times "xsmulsp\|fmuls" 2 } } */
-/* { dg-final { scan-assembler-times "xsnmsub.sp\|fnmsubs" 2 } } */
+/* { dg-final { scan-assembler-times "fres\|xsresp" 2 } } */
+/* { dg-final { scan-assembler-times "fmuls\|xsmulsp" 2 } } */
+/* { dg-final { scan-assembler-times "fnmsubs\|xsnmsub.sp" 2 } } */
 /* { dg-final { scan-assembler-times "xsmuldp\|fmul\ " 2 } } */
 /* { dg-final { scan-assembler-times "xsnmsub.dp\|fnmsub\ " 4 } } */
 /* { dg-final { scan-assembler-times "xvmulsp" 7 } } */

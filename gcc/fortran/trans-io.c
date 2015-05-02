@@ -1,5 +1,5 @@
 /* IO Code translation/library interface
-   Copyright (C) 2002-2013 Free Software Foundation, Inc.
+   Copyright (C) 2002-2014 Free Software Foundation, Inc.
    Contributed by Paul Brook
 
 This file is part of GCC.
@@ -23,6 +23,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tree.h"
+#include "stringpool.h"
+#include "stor-layout.h"
 #include "ggc.h"
 #include "diagnostic-core.h"	/* For internal_error.  */
 #include "gfortran.h"
@@ -228,9 +230,10 @@ gfc_build_st_parameter (enum ioparam_type ptype, tree *types)
    Therefore, the code to set these flags must be generated before
    this function is used.  */
 
-void
-gfc_trans_io_runtime_check (tree cond, tree var, int error_code,
-			 const char * msgid, stmtblock_t * pblock)
+static void
+gfc_trans_io_runtime_check (bool has_iostat, tree cond, tree var,
+			    int error_code, const char * msgid,
+			    stmtblock_t * pblock)
 {
   stmtblock_t block;
   tree body;
@@ -243,6 +246,13 @@ gfc_trans_io_runtime_check (tree cond, tree var, int error_code,
 
   /* The code to generate the error.  */
   gfc_start_block (&block);
+
+  if (has_iostat)
+    gfc_add_expr_to_block (&block, build_predict_expr (PRED_FORTRAN_FAIL_IO,
+						       NOT_TAKEN));
+  else
+    gfc_add_expr_to_block (&block, build_predict_expr (PRED_NORETURN,
+						       NOT_TAKEN));
 
   arg1 = gfc_build_addr_expr (NULL_TREE, var);
 
@@ -266,7 +276,6 @@ gfc_trans_io_runtime_check (tree cond, tree var, int error_code,
     }
   else
     {
-      cond = gfc_unlikely (cond);
       tmp = build3_v (COND_EXPR, cond, body, build_empty_stmt (input_location));
       gfc_add_expr_to_block (pblock, tmp);
     }
@@ -492,8 +501,8 @@ set_parameter_const (stmtblock_t *block, tree var, enum iofield type,
    st_parameter_XXX structure.  This is a pass by value.  */
 
 static unsigned int
-set_parameter_value (stmtblock_t *block, tree var, enum iofield type,
-		     gfc_expr *e)
+set_parameter_value (stmtblock_t *block, bool has_iostat, tree var,
+		     enum iofield type, gfc_expr *e)
 {
   gfc_se se;
   tree tmp;
@@ -518,18 +527,18 @@ set_parameter_value (stmtblock_t *block, tree var, enum iofield type,
       cond = fold_build2_loc (input_location, LT_EXPR, boolean_type_node,
 			      se.expr,
 			      fold_convert (TREE_TYPE (se.expr), val));
-      gfc_trans_io_runtime_check (cond, var, LIBERROR_BAD_UNIT,
-			       "Unit number in I/O statement too small",
-			       &se.pre);
+      gfc_trans_io_runtime_check (has_iostat, cond, var, LIBERROR_BAD_UNIT,
+				  "Unit number in I/O statement too small",
+				  &se.pre);
 
       /* UNIT numbers should be less than the max.  */
       val = gfc_conv_mpz_to_tree (gfc_integer_kinds[i].huge, 4);
       cond = fold_build2_loc (input_location, GT_EXPR, boolean_type_node,
 			      se.expr,
 			      fold_convert (TREE_TYPE (se.expr), val));
-      gfc_trans_io_runtime_check (cond, var, LIBERROR_BAD_UNIT,
-			       "Unit number in I/O statement too large",
-			       &se.pre);
+      gfc_trans_io_runtime_check (has_iostat, cond, var, LIBERROR_BAD_UNIT,
+				  "Unit number in I/O statement too large",
+				  &se.pre);
 
     }
 
@@ -958,7 +967,8 @@ gfc_trans_open (gfc_code * code)
     mask |= set_string (&block, &post_block, var, IOPARM_open_form, p->form);
 
   if (p->recl)
-    mask |= set_parameter_value (&block, var, IOPARM_open_recl_in, p->recl);
+    mask |= set_parameter_value (&block, p->iostat, var, IOPARM_open_recl_in,
+				 p->recl);
 
   if (p->blank)
     mask |= set_string (&block, &post_block, var, IOPARM_open_blank,
@@ -1008,7 +1018,7 @@ gfc_trans_open (gfc_code * code)
   set_parameter_const (&block, var, IOPARM_common_flags, mask);
 
   if (p->unit)
-    set_parameter_value (&block, var, IOPARM_common_unit, p->unit);
+    set_parameter_value (&block, p->iostat, var, IOPARM_common_unit, p->unit);
   else
     set_parameter_const (&block, var, IOPARM_common_unit, 0);
 
@@ -1061,7 +1071,7 @@ gfc_trans_close (gfc_code * code)
   set_parameter_const (&block, var, IOPARM_common_flags, mask);
 
   if (p->unit)
-    set_parameter_value (&block, var, IOPARM_common_unit, p->unit);
+    set_parameter_value (&block, p->iostat, var, IOPARM_common_unit, p->unit);
   else
     set_parameter_const (&block, var, IOPARM_common_unit, 0);
 
@@ -1112,7 +1122,7 @@ build_filepos (tree function, gfc_code * code)
   set_parameter_const (&block, var, IOPARM_common_flags, mask);
 
   if (p->unit)
-    set_parameter_value (&block, var, IOPARM_common_unit, p->unit);
+    set_parameter_value (&block, p->iostat, var, IOPARM_common_unit, p->unit);
   else
     set_parameter_const (&block, var, IOPARM_common_unit, 0);
 
@@ -1373,7 +1383,7 @@ gfc_trans_inquire (gfc_code * code)
   set_parameter_const (&block, var, IOPARM_common_flags, mask);
 
   if (p->unit)
-    set_parameter_value (&block, var, IOPARM_common_unit, p->unit);
+    set_parameter_value (&block, p->iostat, var, IOPARM_common_unit, p->unit);
   else
     set_parameter_const (&block, var, IOPARM_common_unit, 0);
 
@@ -1420,12 +1430,12 @@ gfc_trans_wait (gfc_code * code)
     mask |= IOPARM_common_err;
 
   if (p->id)
-    mask |= set_parameter_value (&block, var, IOPARM_wait_id, p->id);
+    mask |= set_parameter_value (&block, p->iostat, var, IOPARM_wait_id, p->id);
 
   set_parameter_const (&block, var, IOPARM_common_flags, mask);
 
   if (p->unit)
-    set_parameter_value (&block, var, IOPARM_common_unit, p->unit);
+    set_parameter_value (&block, p->iostat, var, IOPARM_common_unit, p->unit);
 
   tmp = gfc_build_addr_expr (NULL_TREE, var);
   tmp = build_call_expr_loc (input_location,
@@ -1716,7 +1726,8 @@ build_dt (tree function, gfc_code * code)
 				   IOPARM_dt_id, dt->id);
 
       if (dt->pos)
-	mask |= set_parameter_value (&block, var, IOPARM_dt_pos, dt->pos);
+	mask |= set_parameter_value (&block, dt->iostat, var, IOPARM_dt_pos,
+				     dt->pos);
 
       if (dt->asynchronous)
 	mask |= set_string (&block, &post_block, var, IOPARM_dt_asynchronous,
@@ -1747,7 +1758,8 @@ build_dt (tree function, gfc_code * code)
 			    dt->sign);
 
       if (dt->rec)
-	mask |= set_parameter_value (&block, var, IOPARM_dt_rec, dt->rec);
+	mask |= set_parameter_value (&block, dt->iostat, var, IOPARM_dt_rec,
+				     dt->rec);
 
       if (dt->advance)
 	mask |= set_string (&block, &post_block, var, IOPARM_dt_advance,
@@ -1799,7 +1811,8 @@ build_dt (tree function, gfc_code * code)
 	set_parameter_const (&block, var, IOPARM_common_flags, mask);
 
       if (dt->io_unit && dt->io_unit->ts.type == BT_INTEGER)
-	set_parameter_value (&block, var, IOPARM_common_unit, dt->io_unit);
+	set_parameter_value (&block, dt->iostat, var, IOPARM_common_unit,
+			     dt->io_unit);
     }
   else
     set_parameter_const (&block, var, IOPARM_common_flags, mask);
@@ -2026,20 +2039,8 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
       && ts->u.derived != NULL
       && (ts->is_iso_c == 1 || ts->u.derived->ts.is_iso_c == 1))
     {
-      /* C_PTR and C_FUNPTR have private components which means they can not
-         be printed.  However, if -std=gnu and not -pedantic, allow
-         the component to be printed to help debugging.  */
-      if (gfc_notification_std (GFC_STD_GNU) != SILENT)
-	{
-	  gfc_error_now ("Derived type '%s' at %L has PRIVATE components",
-			 ts->u.derived->name, code != NULL ? &(code->loc) :
-			 &gfc_current_locus);
-	  return;
-	}
-
-      ts->type = ts->u.derived->ts.type;
-      ts->kind = ts->u.derived->ts.kind;
-      ts->f90_type = ts->u.derived->ts.f90_type;
+      ts->type = BT_INTEGER;
+      ts->kind = gfc_index_integer_kind;
     }
 
   kind = ts->kind;
@@ -2159,10 +2160,10 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
 				      expr);
 
       /* Make sure that the derived type has been built.  An external
-	 function, if only referenced in an io statement requires this
+	 function, if only referenced in an io statement, requires this
 	 check (see PR58771).  */
       if (ts->u.derived->backend_decl == NULL_TREE)
-	tmp = gfc_typenode_for_spec (ts);
+	(void) gfc_typenode_for_spec (ts);
 
       for (c = ts->u.derived->components; c; c = c->next)
 	{
@@ -2278,7 +2279,10 @@ gfc_trans_transfer (gfc_code * code)
 	    {
 	      for (n = 0; n < ref->u.ar.dimen; n++)
 		if (ref->u.ar.dimen_type[n] == DIMEN_VECTOR)
-		  seen_vector = true;
+		  {
+		    seen_vector = true;
+		    break;
+		  }
 	    }
 
 	  if (seen_vector && last_dt == READ)

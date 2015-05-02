@@ -1,30 +1,12 @@
-2014-12-19  Release Manager
+2014-04-22  Release Manager
 
-	* GCC 4.8.4 released.
+	* GCC 4.9.0 released.
 
-2014-05-22  Release Manager
+2013-09-20  Alan Modra  <amodra@gmail.com>
 
-	* GCC 4.8.3 released.
-
-2014-04-04  Bill Schmidt  <wschmidt@linux.vnet.ibm.com>
-
-	Backport from mainline
-	2013-11-15  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
-
-	* acinclude.m4: Update to mainline version.
+	* acinclude.m4 (_LT_ENABLE_LOCK <ld -m flags>): Remove non-canonical
+	ppc host match.  Support little-endian powerpc linux hosts.
 	* configure: Regenerate.
-
-2013-10-16  Release Manager
-
-	* GCC 4.8.2 released.
-
-2013-05-31  Release Manager
-
-	* GCC 4.8.1 released.
-
-2013-03-22  Release Manager
-
-	* GCC 4.8.0 released.
 
 2011-11-21  Andreas Tobler  <andreast@fgznet.ch>
 

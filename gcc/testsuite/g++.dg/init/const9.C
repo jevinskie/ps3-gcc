@@ -1,5 +1,5 @@
 // PR c++/55893
-// { dg-final { scan-assembler-not "rodata" { target { ! hppa*-*-* } } } }
+// { dg-final { scan-assembler-not "rodata" } }
 
 struct foo
 {

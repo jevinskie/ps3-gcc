@@ -1,4 +1,4 @@
-/* Copyright (C) 1994-2013 Free Software Foundation, Inc.
+/* Copyright (C) 1994-2014 Free Software Foundation, Inc.
 
 This file is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -1003,11 +1003,17 @@ hiset:	sts	macl,r0		! r0 = bb*dd
 	ENDFUNC(GLOBAL(mulsi3))
 #endif
 #endif /* ! __SH5__ */
+
+/*------------------------------------------------------------------------------
+  32 bit signed integer division that uses FPU double precision division.  */
+
 #ifdef L_sdivsi3_i4
 	.title "SH DIVIDE"
-!! 4 byte integer Divide code for the Renesas SH
+
 #if defined (__SH4__) || defined (__SH2A__)
-!! args in r4 and r5, result in fpul, clobber dr0, dr2
+/* This variant is used when FPSCR.PR = 1 (double precision) is the default
+   setting.
+   Args in r4 and r5, result in fpul, clobber dr0, dr2.  */
 
 	.global	GLOBAL(sdivsi3_i4)
 	HIDDEN_FUNC(GLOBAL(sdivsi3_i4))
@@ -1021,8 +1027,13 @@ GLOBAL(sdivsi3_i4):
 	ftrc dr0,fpul
 
 	ENDFUNC(GLOBAL(sdivsi3_i4))
+
 #elif defined (__SH2A_SINGLE__) || defined (__SH2A_SINGLE_ONLY__) || defined(__SH4_SINGLE__) || defined(__SH4_SINGLE_ONLY__) || (defined (__SH5__) && ! defined __SH4_NOFPU__)
-!! args in r4 and r5, result in fpul, clobber r2, dr0, dr2
+/* This variant is used when FPSCR.PR = 0 (sigle precision) is the default
+   setting.
+   Args in r4 and r5, result in fpul, clobber r2, dr0, dr2.
+   For this to work, we must temporarily switch the FPU do double precision,
+   but we better do not touch FPSCR.FR.  See PR 6526.  */
 
 #if ! __SH5__ || __SH5__ == 32
 #if __SH5__
@@ -1031,24 +1042,43 @@ GLOBAL(sdivsi3_i4):
 	.global	GLOBAL(sdivsi3_i4)
 	HIDDEN_FUNC(GLOBAL(sdivsi3_i4))
 GLOBAL(sdivsi3_i4):
-	sts.l fpscr,@-r15
-	mov #8,r2
-	swap.w r2,r2
-	lds r2,fpscr
-	lds r4,fpul
-	float fpul,dr0
-	lds r5,fpul
-	float fpul,dr2
-	fdiv dr2,dr0
-	ftrc dr0,fpul
+
+#ifndef __SH4A__
+	mov.l	r3,@-r15
+	sts	fpscr,r2
+	mov	#8,r3
+	swap.w	r3,r3		// r3 = 1 << 19 (FPSCR.PR bit)
+	or	r2,r3
+	lds	r3,fpscr	// Set FPSCR.PR = 1.
+	lds	r4,fpul
+	float	fpul,dr0
+	lds	r5,fpul
+	float	fpul,dr2
+	fdiv	dr2,dr0
+	ftrc	dr0,fpul
+	lds	r2,fpscr
 	rts
-	lds.l @r15+,fpscr
+	mov.l	@r15+,r3
+#else
+/* On SH4A we can use the fpchg instruction to flip the FPSCR.PR bit.  */
+	fpchg
+	lds	r4,fpul
+	float	fpul,dr0
+	lds	r5,fpul
+	float	fpul,dr2
+	fdiv	dr2,dr0
+	ftrc	dr0,fpul
+	rts
+	fpchg	
+
+#endif /* __SH4A__  */
 
 	ENDFUNC(GLOBAL(sdivsi3_i4))
 #endif /* ! __SH5__ || __SH5__ == 32 */
 #endif /* ! __SH4__ || __SH2A__  */
-#endif
+#endif /* L_sdivsi3_i4  */
 
+//------------------------------------------------------------------------------
 #ifdef L_sdivsi3
 /* __SH4_SINGLE_ONLY__ keeps this part for link compatibility with
    sh2e/sh3e code.  */
@@ -1248,7 +1278,7 @@ GLOBAL(sdivsi3_2):
 #endif
 	ENDFUNC(GLOBAL(sdivsi3_2))
 #endif
-#elif __SHMEDIA__
+#elif defined __SHMEDIA__
 /* m5compact-nofpu */
  // clobbered: r18,r19,r20,r21,r25,tr0,tr1,tr2
 	.mode	SHmedia
@@ -1367,54 +1397,60 @@ div0:	rts
 	mov	#0,r0
 
 	ENDFUNC(GLOBAL(sdivsi3))
-#endif /* ! __SHMEDIA__ */
-#endif
-#ifdef L_udivsi3_i4
+#endif /* ! __SHMEDIA__  */
+#endif /* L_sdivsi3  */
 
+/*------------------------------------------------------------------------------
+  32 bit unsigned integer division that uses FPU double precision division.  */
+
+#ifdef L_udivsi3_i4
 	.title "SH DIVIDE"
-!! 4 byte integer Divide code for the Renesas SH
+
 #if defined (__SH4__) || defined (__SH2A__)
-!! args in r4 and r5, result in fpul, clobber r0, r1, r4, r5, dr0, dr2, dr4,
-!! and t bit
+/* This variant is used when FPSCR.PR = 1 (double precision) is the default
+   setting.
+   Args in r4 and r5, result in fpul,
+   clobber r0, r1, r4, r5, dr0, dr2, dr4, and t bit  */
 
 	.global	GLOBAL(udivsi3_i4)
 	HIDDEN_FUNC(GLOBAL(udivsi3_i4))
 GLOBAL(udivsi3_i4):
-	mov #1,r1
-	cmp/hi r1,r5
-	bf trivial
-	rotr r1
-	xor r1,r4
-	lds r4,fpul
-	mova L1,r0
+	mov	#1,r1
+	cmp/hi	r1,r5
+	bf/s	trivial
+	rotr	r1
+	xor	r1,r4
+	lds	r4,fpul
+	mova	L1,r0
 #ifdef FMOVD_WORKS
-	fmov.d @r0+,dr4
+	fmov.d	@r0+,dr4
 #else
-	fmov.s @r0+,DR40
-	fmov.s @r0,DR41
+	fmov.s	@r0+,DR40
+	fmov.s	@r0,DR41
 #endif
-	float fpul,dr0
-	xor r1,r5
-	lds r5,fpul
-	float fpul,dr2
-	fadd dr4,dr0
-	fadd dr4,dr2
-	fdiv dr2,dr0
+	float	fpul,dr0
+	xor	r1,r5
+	lds	r5,fpul
+	float	fpul,dr2
+	fadd	dr4,dr0
+	fadd	dr4,dr2
+	fdiv	dr2,dr0
 	rts
-	ftrc dr0,fpul
+	ftrc	dr0,fpul
 
 trivial:
 	rts
-	lds r4,fpul
+	lds	r4,fpul
 
 	.align 2
 #ifdef FMOVD_WORKS
-	.align 3	! make double below 8 byte aligned.
+	.align 3	// Make the double below 8 byte aligned.
 #endif
 L1:
 	.double 2147483648
 
 	ENDFUNC(GLOBAL(udivsi3_i4))
+
 #elif defined (__SH5__) && ! defined (__SH4_NOFPU__) && ! defined (__SH2A_NOFPU__)
 #if ! __SH5__ || __SH5__ == 32
 !! args in r4 and r5, result in fpul, clobber r20, r21, dr0, fr33
@@ -1436,57 +1472,106 @@ GLOBAL(udivsi3_i4):
 
 	ENDFUNC(GLOBAL(udivsi3_i4))
 #endif /* ! __SH5__ || __SH5__ == 32 */
+
 #elif defined (__SH2A_SINGLE__) || defined (__SH2A_SINGLE_ONLY__) || defined(__SH4_SINGLE__) || defined(__SH4_SINGLE_ONLY__)
-!! args in r4 and r5, result in fpul, clobber r0, r1, r4, r5, dr0, dr2, dr4
+/* This variant is used when FPSCR.PR = 0 (sigle precision) is the default
+   setting.
+   Args in r4 and r5, result in fpul,
+   clobber r0, r1, r4, r5, dr0, dr2, dr4.
+   For this to work, we must temporarily switch the FPU do double precision,
+   but we better do not touch FPSCR.FR.  See PR 6526.  */
 
 	.global	GLOBAL(udivsi3_i4)
 	HIDDEN_FUNC(GLOBAL(udivsi3_i4))
 GLOBAL(udivsi3_i4):
-	mov #1,r1
-	cmp/hi r1,r5
-	bf trivial
-	sts.l fpscr,@-r15
-	mova L1,r0
-	lds.l @r0+,fpscr
-	rotr r1
-	xor r1,r4
-	lds r4,fpul
+
+#ifndef __SH4A__
+	mov	#1,r1
+	cmp/hi	r1,r5
+	bf/s	trivial
+	rotr	r1		// r1 = 1 << 31
+	sts.l	fpscr,@-r15
+	xor	r1,r4
+	mov.l	@(0,r15),r0
+	xor	r1,r5
+	mov.l	L2,r1
+	lds	r4,fpul
+	or	r0,r1
+	mova	L1,r0
+	lds	r1,fpscr
 #ifdef FMOVD_WORKS
-	fmov.d @r0+,dr4
+	fmov.d	@r0+,dr4
 #else
-	fmov.s @r0+,DR40
-	fmov.s @r0,DR41
+	fmov.s	@r0+,DR40
+	fmov.s	@r0,DR41
 #endif
-	float fpul,dr0
-	xor r1,r5
-	lds r5,fpul
-	float fpul,dr2
-	fadd dr4,dr0
-	fadd dr4,dr2
-	fdiv dr2,dr0
-	ftrc dr0,fpul
+	float	fpul,dr0
+	lds	r5,fpul
+	float	fpul,dr2
+	fadd	dr4,dr0
+	fadd	dr4,dr2
+	fdiv	dr2,dr0
+	ftrc	dr0,fpul
 	rts
-	lds.l @r15+,fpscr
+	lds.l	@r15+,fpscr
 
 #ifdef FMOVD_WORKS
-	.align 3	! make double below 8 byte aligned.
+	.align 3	// Make the double below 8 byte aligned.
 #endif
 trivial:
 	rts
-	lds r4,fpul
+	lds	r4,fpul
+
+	.align 2
+L2:
+#ifdef FMOVD_WORKS
+	.long 0x180000	// FPSCR.PR = 1, FPSCR.SZ = 1
+#else
+	.long 0x80000	// FPSCR.PR = 1
+#endif
+L1:
+	.double 2147483648
+
+#else
+/* On SH4A we can use the fpchg instruction to flip the FPSCR.PR bit.
+   Although on SH4A fmovd usually works, it would require either additional
+   two fschg instructions or an FPSCR push + pop.  It's not worth the effort
+   for loading only one double constant.  */
+	mov	#1,r1
+	cmp/hi	r1,r5
+	bf/s	trivial
+	rotr	r1		// r1 = 1 << 31
+	fpchg
+	mova	L1,r0
+	xor	r1,r4
+	fmov.s	@r0+,DR40
+	lds	r4,fpul
+	fmov.s	@r0,DR41
+	xor	r1,r5
+	float	fpul,dr0
+	lds	r5,fpul
+	float	fpul,dr2
+	fadd	dr4,dr0
+	fadd	dr4,dr2
+	fdiv	dr2,dr0
+	ftrc	dr0,fpul
+	rts
+	fpchg
+
+trivial:
+	rts
+	lds	r4,fpul
 
 	.align 2
 L1:
-#ifndef FMOVD_WORKS
-	.long 0x80000
-#else
-	.long 0x180000
-#endif
 	.double 2147483648
+
+#endif /* __SH4A__  */
+
 
 	ENDFUNC(GLOBAL(udivsi3_i4))
 #endif /* ! __SH4__ */
-#endif
+#endif /* L_udivsi3_i4  */
 
 #ifdef L_udivsi3
 /* __SH4_SINGLE_ONLY__ keeps this part for link compatibility with
@@ -1598,7 +1683,7 @@ GLOBAL(udivsi3):
  add.l r18,r25,r0
  blink tr0,r63
 #endif
-#elif __SHMEDIA__
+#elif defined (__SHMEDIA__)
 /* m5compact-nofpu - more emphasis on code size than on speed, but don't
    ignore speed altogether - div1 needs 9 cycles, subc 7 and rotcl 4.
    So use a short shmedia loop.  */
@@ -1622,7 +1707,7 @@ LOCAL(udivsi3_dontsub):
  bnei r25,-32,tr1
  add.l r20,r63,r0
  blink tr2,r63
-#else /* ! __SHMEDIA__ */
+#else /* ! defined (__SHMEDIA__) */
 LOCAL(div8):
  div1 r5,r4
 LOCAL(div7):
@@ -1688,7 +1773,7 @@ LOCAL(large_divisor):
 #endif /* L_udivsi3 */
 
 #ifdef L_udivdi3
-#if __SHMEDIA__
+#ifdef __SHMEDIA__
 	.mode	SHmedia
 	.section	.text..SHmedia32,"ax"
 	.align	2
@@ -1816,7 +1901,7 @@ LOCAL(no_lo_adj):
 #endif /* L_udivdi3 */
 
 #ifdef L_divdi3
-#if __SHMEDIA__
+#ifdef __SHMEDIA__
 	.mode	SHmedia
 	.section	.text..SHmedia32,"ax"
 	.align	2
@@ -1840,7 +1925,7 @@ GLOBAL(divdi3):
 #endif /* L_divdi3 */
 
 #ifdef L_umoddi3
-#if __SHMEDIA__
+#ifdef __SHMEDIA__
 	.mode	SHmedia
 	.section	.text..SHmedia32,"ax"
 	.align	2
@@ -1969,7 +2054,7 @@ LOCAL(no_lo_adj):
 #endif /* L_umoddi3 */
 
 #ifdef L_moddi3
-#if __SHMEDIA__
+#ifdef __SHMEDIA__
 	.mode	SHmedia
 	.section	.text..SHmedia32,"ax"
 	.align	2
@@ -3057,7 +3142,7 @@ GLOBAL(GCC_pop_shmedia_regs_nofpu):
 
 #ifdef L_div_table
 #if __SH5__
-#if defined(__pic__) && __SHMEDIA__
+#if defined(__pic__) && defined(__SHMEDIA__)
 	.global	GLOBAL(sdivsi3)
 	FUNC(GLOBAL(sdivsi3))
 #if __SH5__ == 32
@@ -3130,7 +3215,7 @@ Defects for bias -330:
 #else /* ! __pic__ || ! __SHMEDIA__ */
 	.section	.rodata
 #endif /* __pic__ */
-#if defined(TEXT_DATA_BUG) && defined(__pic__) && __SHMEDIA__
+#if defined(TEXT_DATA_BUG) && defined(__pic__) && defined(__SHMEDIA__)
 	.balign 2
 	.type	Local_div_table,@object
 	.size	Local_div_table,128

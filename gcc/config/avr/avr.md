@@ -1,6 +1,6 @@
 ;;   Machine description for GNU compiler,
 ;;   for ATMEL AVR micro controllers.
-;;   Copyright (C) 1998-2013 Free Software Foundation, Inc.
+;;   Copyright (C) 1998-2014 Free Software Foundation, Inc.
 ;;   Contributed by Denis Chertykov (chertykov@gmail.com)
 
 ;; This file is part of GCC.
@@ -32,6 +32,7 @@
 ;;  o  Displacement for (mem (plus (reg) (const_int))) operands.
 ;;  p  POST_INC or PRE_DEC address as a pointer (X, Y, Z)
 ;;  r  POST_INC or PRE_DEC address as a register (r26, r28, r30)
+;;  r  Print a REG without the register prefix 'r'.
 ;; T/T Print operand suitable for BLD/BST instruction, i.e. register and
 ;;     bit number.  This gets 2 operands: The first %T gets a REG_P and
 ;;     just cashes the operand for the next %T.  The second %T gets
@@ -89,7 +90,7 @@
 (include "constraints.md")
 
 ;; Condition code settings.
-(define_attr "cc" "none,set_czn,set_zn,set_vzn,set_n,compare,clobber,
+(define_attr "cc" "none,set_czn,set_zn,set_n,compare,clobber,
                    plus,ldi"
   (const_string "none"))
 
@@ -367,15 +368,6 @@
   ""
   {
     int i;
-
-    // Avoid (subreg (mem)) for non-generic address spaces below.  Because
-    // of the poor addressing capabilities of these spaces it's better to
-    // load them in one chunk.  And it avoids PR61443.
-
-    if (MEM_P (operands[0])
-        && !ADDR_SPACE_GENERIC_P (MEM_ADDR_SPACE (operands[0])))
-      operands[0] = copy_to_mode_reg (<MODE>mode, operands[0]);
-
     for (i = GET_MODE_SIZE (<MODE>mode) - 1; i >= 0; --i)
       {
         rtx part = simplify_gen_subreg (QImode, operands[0], <MODE>mode, i);
@@ -1106,7 +1098,7 @@
 	inc %0\;inc %0
 	dec %0\;dec %0"
   [(set_attr "length" "1,1,1,1,2,2")
-   (set_attr "cc" "set_czn,set_czn,set_vzn,set_vzn,set_vzn,set_vzn")])
+   (set_attr "cc" "set_czn,set_czn,set_zn,set_zn,set_zn,set_zn")])
 
 ;; "addhi3"
 ;; "addhq3" "adduhq3"
@@ -1377,7 +1369,7 @@
 	dec %0\;dec %0
 	inc %0\;inc %0"
   [(set_attr "length" "1,1,1,1,2,2")
-   (set_attr "cc" "set_czn,set_czn,set_vzn,set_vzn,set_vzn,set_vzn")])
+   (set_attr "cc" "set_czn,set_czn,set_zn,set_zn,set_zn,set_zn")])
 
 ;; "subhi3"
 ;; "subhq3" "subuhq3"
@@ -4000,7 +3992,7 @@
   ""
   "neg %0"
   [(set_attr "length" "1")
-   (set_attr "cc" "set_vzn")])
+   (set_attr "cc" "set_zn")])
 
 (define_insn "*negqihi2"
   [(set (match_operand:HI 0 "register_operand"                        "=r")
@@ -5350,7 +5342,7 @@
                       (label_ref (match_operand 0 "" ""))
                       (pc)))]
   "!AVR_HAVE_JMP_CALL
-   || !avr_current_device->errata_skip"
+   || !(avr_current_device->dev_attribute & AVR_ERRATA_SKIP)"
   {
     if (operands[2] == CONST0_RTX (<MODE>mode))
       operands[2] = zero_reg_rtx;

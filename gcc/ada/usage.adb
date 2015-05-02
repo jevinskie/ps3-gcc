@@ -122,8 +122,7 @@ begin
 
    --  Individual lines for switches. Write_Switch_Char outputs fourteen
    --  characters, so the remaining message is allowed to be a maximum
-   --  of 65 characters to be comfortable on an 80 character device.
-   --  If the Write_Str fits on one line, it is short enough!
+   --  of 65 characters to be comfortable in an 80 character window.
 
    --  Line for -gnata switch
 
@@ -153,7 +152,7 @@ begin
    --  Line for -gnatC switch
 
    Write_Switch_Char ("C");
-   Write_Line ("Generate CodePeer information (no code generation)");
+   Write_Line ("Generate CodePeer intermediate format (no code generation)");
 
    --  Line for -gnatd switch
 
@@ -167,10 +166,7 @@ begin
    Write_Switch_Char ("Dnn");
    Write_Line ("Debug expanded generated code (max line length = nn)");
 
-   --  Line for -gnatea switch
-
-   Write_Switch_Char ("ea");
-   Write_Line ("Delimiter for automatically added switches (internal switch)");
+   --  No line for -gnatea : internal switch
 
    --  Line for -gnateA switch
 
@@ -181,6 +177,11 @@ begin
 
    Write_Switch_Char ("ec=?");
    Write_Line ("Specify configuration pragmas file, e.g. -gnatec=/x/f.adc");
+
+   --  Line for -gnateC switch
+
+   Write_Switch_Char ("eC");
+   Write_Line ("Generate CodePeer messages (ignored without -gnatcC)");
 
    --  Line for -gnated switch
 
@@ -215,22 +216,29 @@ begin
    --  Line for -gnatei switch
 
    Write_Switch_Char ("einn");
-   Write_Line ("Set maximumum number of instantiations to nn");
+   Write_Line ("Set maximum number of instantiations to nn");
 
    --  Line for -gnateI switch
 
    Write_Switch_Char ("eInn");
    Write_Line ("Index in multi-unit source, e.g. -gnateI2");
 
+   --  Line for -gnatel switch
+
+   Write_Switch_Char ("el");
+   Write_Line ("Turn on info messages on generated Elaborate[_All] pragmas");
+
+   --  Line for -gnateL switch
+
+   Write_Switch_Char ("eL");
+   Write_Line ("Turn off info messages on generated Elaborate[_All] pragmas");
+
    --  Line for -gnatem switch
 
    Write_Switch_Char ("em=?");
    Write_Line ("Specify mapping file, e.g. -gnatem=mapping");
 
-   --  Line for -gnateO=?
-
-   Write_Switch_Char ("eO=?");
-   Write_Line ("Specify an object path file (internal switch)");
+   --  No line for -gnateO=? : internal switch
 
    --  Line for -gnatep switch
 
@@ -242,6 +250,8 @@ begin
    Write_Switch_Char ("eP");
    Write_Line ("Pure/Prelaborate errors generate warnings rather than errors");
 
+   --  No line for -gnates=? : internal switch
+
    --  Line for -gnateS switch
 
    Write_Switch_Char ("eS");
@@ -249,8 +259,18 @@ begin
 
    --  Line for -gnatet switch
 
-   Write_Switch_Char ("et");
-   Write_Line ("Generate target dependent information in ALI file");
+   Write_Switch_Char ("et=?");
+   Write_Line ("Write target dependent information file ?, e.g. gnatet=tdf");
+
+   --  Line for -gnateT switch
+
+   Write_Switch_Char ("eT=?");
+   Write_Line ("Read target dependent information file ?, e.g. gnateT=tdf");
+
+   --  Line for -gnateu switch
+
+   Write_Switch_Char ("eu");
+   Write_Line ("Ignore unrecognized style/validity/warning switches");
 
    --  Line for -gnateV switch
 
@@ -262,10 +282,7 @@ begin
    Write_Switch_Char ("eY");
    Write_Line ("Ignore all Style_Checks pragmas in source");
 
-   --  Line for -gnatez switch
-
-   Write_Switch_Char ("ez");
-   Write_Line ("Delimiter for automatically added switches (internal switch)");
+   --  No line for -gnatez : internal switch
 
    --  Line for -gnatE switch
 
@@ -355,10 +372,7 @@ begin
    Write_Line
      ("Set mode for general/assertion expressions separately");
 
-   --  Line for -gnatO switch
-
-   Write_Switch_Char ("O nm ");
-   Write_Line ("Set name of output ali file (internal switch)");
+   --  No line for -gnatO : internal switch
 
    --  Line for -gnatp switch
 
@@ -388,7 +402,8 @@ begin
    --  Lines for -gnatR switch
 
    Write_Switch_Char ("R?");
-   Write_Line ("List rep info (?=0/1/2/3 for none/types/all/variable)");
+   Write_Line
+     ("List rep info (?=0/1/2/3/m for none/types/all/variable/mechanisms)");
    Write_Switch_Char ("R?s");
    Write_Line ("List rep info to file.rep instead of standard output");
 
@@ -512,10 +527,8 @@ begin
    Write_Line ("        K*   turn off warnings on constant variable");
    Write_Line ("        .k   turn on warnings for standard redefinition");
    Write_Line ("        .K*  turn off warnings for standard redefinition");
-   Write_Line ("        l    turn on warnings for missing " &
-                                                  "elaboration pragma");
-   Write_Line ("        L*   turn off warnings for missing " &
-                                                  "elaboration pragma");
+   Write_Line ("        l    turn on warnings for elaboration problems");
+   Write_Line ("        L*   turn off warnings for elaboration problems");
    Write_Line ("        .l   turn on info messages for inherited aspects");
    Write_Line ("        .L*  turn off info messages for inherited aspects");
    Write_Line ("        m+   turn on warnings for variable assigned " &
@@ -577,6 +590,8 @@ begin
    Write_Line ("        .X*  turn off warnings for non-local exception");
    Write_Line ("        y*+  turn on warnings for Ada compatibility issues");
    Write_Line ("        Y    turn off warnings for Ada compatibility issues");
+   Write_Line ("        .y   turn on info messages for why pkg body needed");
+   Write_Line ("        .Y*  turn off info messages for why pkg body needed");
    Write_Line ("        z*+  turn on warnings for suspicious " &
                                                   "unchecked conversion");
    Write_Line ("        Z    turn off warnings for suspicious " &
@@ -584,8 +599,8 @@ begin
 
    --  Line for -gnatW switch
 
-   Write_Switch_Char ("W");
-   Write_Str ("Wide character encoding method (");
+   Write_Switch_Char ("W?");
+   Write_Str ("Wide character encoding method (?=");
 
    for J in WC_Encoding_Method loop
       Write_Char (WC_Encoding_Letters (J));
@@ -633,8 +648,8 @@ begin
    Write_Line ("        l    check reference manual layout");
    Write_Line ("        Lnn  check max nest level < nn ");
    Write_Line ("        m    check line length <= 79 characters");
-   Write_Line ("        n    check casing of package Standard identifiers");
    Write_Line ("        Mnn  check line length <= nn characters");
+   Write_Line ("        n    check casing of package Standard identifiers");
    Write_Line ("        N    turn off all checks");
    Write_Line ("        o    check subprogram bodies in alphabetical order");
    Write_Line ("        O    check overriding indicators");

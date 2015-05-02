@@ -1,5 +1,5 @@
 /* { dg-do compile { target powerpc_altivec_ok } } */
-/* { dg-options "-maltivec -mcpu=G5 -O2 -Wno-deprecated" } */
+/* { dg-options "-maltivec -mcpu=G5 -O2" } */
 
 #include <altivec.h>
 

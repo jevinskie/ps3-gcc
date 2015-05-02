@@ -1,5 +1,5 @@
 /* 128-bit long double support routines for Darwin.
-   Copyright (C) 1993-2013 Free Software Foundation, Inc.
+   Copyright (C) 1993-2014 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -104,6 +104,8 @@ __gcc_qadd (double a, double aa, double c, double cc)
 
   if (nonfinite (z))
     {
+      if (fabs (z) != inf())
+	return z;
       z = cc + aa + c + a;
       if (nonfinite (z))
 	return z;

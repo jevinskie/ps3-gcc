@@ -1,5 +1,5 @@
 /* Dependency analysis
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
    Contributed by Paul Brook <paul@nowt.org>
 
 This file is part of GCC.
@@ -240,6 +240,46 @@ gfc_dep_compare_functions (gfc_expr *e1, gfc_expr *e2, bool impure_ok)
 	return -2;      
 }
 
+/* Helper function to look through parens, unary plus and widening
+   integer conversions.  */
+
+static gfc_expr*
+discard_nops (gfc_expr *e)
+{
+  gfc_actual_arglist *arglist;
+
+  if (e == NULL)
+    return NULL;
+
+  while (true)
+    {
+      if (e->expr_type == EXPR_OP
+	  && (e->value.op.op == INTRINSIC_UPLUS
+	      || e->value.op.op == INTRINSIC_PARENTHESES))
+	{
+	  e = e->value.op.op1;
+	  continue;
+	}
+
+      if (e->expr_type == EXPR_FUNCTION && e->value.function.isym
+	  && e->value.function.isym->id == GFC_ISYM_CONVERSION
+	  && e->ts.type == BT_INTEGER)
+	{
+	  arglist = e->value.function.actual;
+	  if (arglist->expr->ts.type == BT_INTEGER
+	      && e->ts.kind > arglist->expr->ts.kind)
+	    {
+	      e = arglist->expr;
+	      continue;
+	    }
+	}
+      break;
+    }
+
+  return e;
+}
+
+
 /* Compare two expressions.  Return values:
    * +1 if e1 > e2
    * 0 if e1 == e2
@@ -252,59 +292,13 @@ gfc_dep_compare_functions (gfc_expr *e1, gfc_expr *e2, bool impure_ok)
 int
 gfc_dep_compare_expr (gfc_expr *e1, gfc_expr *e2)
 {
-  gfc_actual_arglist *args1;
-  gfc_actual_arglist *args2;
   int i;
-  gfc_expr *n1, *n2;
-
-  n1 = NULL;
-  n2 = NULL;
 
   if (e1 == NULL && e2 == NULL)
     return 0;
 
-  /* Remove any integer conversion functions to larger types.  */
-  if (e1->expr_type == EXPR_FUNCTION && e1->value.function.isym
-      && e1->value.function.isym->id == GFC_ISYM_CONVERSION
-      && e1->ts.type == BT_INTEGER)
-    {
-      args1 = e1->value.function.actual;
-      if (args1->expr->ts.type == BT_INTEGER
-	  && e1->ts.kind > args1->expr->ts.kind)
-	n1 = args1->expr;
-    }
-
-  if (e2->expr_type == EXPR_FUNCTION && e2->value.function.isym
-      && e2->value.function.isym->id == GFC_ISYM_CONVERSION
-      && e2->ts.type == BT_INTEGER)
-    {
-      args2 = e2->value.function.actual;
-      if (args2->expr->ts.type == BT_INTEGER
-	  && e2->ts.kind > args2->expr->ts.kind)
-	n2 = args2->expr;
-    }
-
-  if (n1 != NULL)
-    {
-      if (n2 != NULL)
-	return gfc_dep_compare_expr (n1, n2);
-      else
-	return gfc_dep_compare_expr (n1, e2);
-    }
-  else
-    {
-      if (n2 != NULL)
-	return gfc_dep_compare_expr (e1, n2);
-    }
-  
-  if (e1->expr_type == EXPR_OP
-      && (e1->value.op.op == INTRINSIC_UPLUS
-	  || e1->value.op.op == INTRINSIC_PARENTHESES))
-    return gfc_dep_compare_expr (e1->value.op.op1, e2);
-  if (e2->expr_type == EXPR_OP
-      && (e2->value.op.op == INTRINSIC_UPLUS
-	  || e2->value.op.op == INTRINSIC_PARENTHESES))
-    return gfc_dep_compare_expr (e1, e2->value.op.op1);
+  e1 = discard_nops (e1);
+  e2 = discard_nops (e2);
 
   if (e1->expr_type == EXPR_OP && e1->value.op.op == INTRINSIC_PLUS)
     {
@@ -500,6 +494,257 @@ gfc_dep_compare_expr (gfc_expr *e1, gfc_expr *e2)
     }
 }
 
+
+/* Return the difference between two expressions.  Integer expressions of
+   the form 
+
+   X + constant, X - constant and constant + X
+
+   are handled.  Return true on success, false on failure. result is assumed
+   to be uninitialized on entry, and will be initialized on success.
+*/
+
+bool
+gfc_dep_difference (gfc_expr *e1, gfc_expr *e2, mpz_t *result)
+{
+  gfc_expr *e1_op1, *e1_op2, *e2_op1, *e2_op2;
+
+  if (e1 == NULL || e2 == NULL)
+    return false;
+
+  if (e1->ts.type != BT_INTEGER || e2->ts.type != BT_INTEGER)
+    return false;
+
+  e1 = discard_nops (e1);
+  e2 = discard_nops (e2);
+
+  /* Inizialize tentatively, clear if we don't return anything.  */
+  mpz_init (*result);
+
+  /* Case 1: c1 - c2 = c1 - c2, trivially.  */
+
+  if (e1->expr_type == EXPR_CONSTANT && e2->expr_type == EXPR_CONSTANT)
+    {
+      mpz_sub (*result, e1->value.integer, e2->value.integer);
+      return true;
+    }
+
+  if (e1->expr_type == EXPR_OP && e1->value.op.op == INTRINSIC_PLUS)
+    {
+      e1_op1 = discard_nops (e1->value.op.op1);
+      e1_op2 = discard_nops (e1->value.op.op2);
+
+      /* Case 2: (X + c1) - X = c1.  */
+      if (e1_op2->expr_type == EXPR_CONSTANT
+	  && gfc_dep_compare_expr (e1_op1, e2) == 0)
+	{
+	  mpz_set (*result, e1_op2->value.integer);
+	  return true;
+	}
+
+      /* Case 3: (c1 + X) - X = c1. */
+      if (e1_op1->expr_type == EXPR_CONSTANT
+	  && gfc_dep_compare_expr (e1_op2, e2) == 0)
+	{
+	  mpz_set (*result, e1_op1->value.integer);
+	  return true;
+	}
+
+      if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_PLUS)
+	{
+	  e2_op1 = discard_nops (e2->value.op.op1);
+	  e2_op2 = discard_nops (e2->value.op.op2);
+
+	  if (e1_op2->expr_type == EXPR_CONSTANT)
+	    {
+	      /* Case 4: X + c1 - (X + c2) = c1 - c2.  */
+	      if (e2_op2->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op1, e2_op1) == 0)
+		{
+		  mpz_sub (*result, e1_op2->value.integer,
+			   e2_op2->value.integer);
+		  return true;
+		}
+	      /* Case 5: X + c1 - (c2 + X) = c1 - c2.  */
+	      if (e2_op1->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op1, e2_op2) == 0)
+		{
+		  mpz_sub (*result, e1_op2->value.integer,
+			   e2_op1->value.integer);
+		  return true;
+		}
+	    }
+	  else if (e1_op1->expr_type == EXPR_CONSTANT)
+	    {
+	      /* Case 6: c1 + X - (X + c2) = c1 - c2.  */
+	      if (e2_op2->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op2, e2_op1) == 0)
+		{
+		  mpz_sub (*result, e1_op1->value.integer,
+			   e2_op2->value.integer);
+		  return true;
+		}
+	      /* Case 7: c1 + X - (c2 + X) = c1 - c2.  */
+	      if (e2_op1->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op2, e2_op2) == 0)
+		{
+		  mpz_sub (*result, e1_op1->value.integer,
+			   e2_op1->value.integer);
+		  return true;
+		}
+	    }
+	}
+
+      if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_MINUS)
+	{
+	  e2_op1 = discard_nops (e2->value.op.op1);
+	  e2_op2 = discard_nops (e2->value.op.op2);
+
+	  if (e1_op2->expr_type == EXPR_CONSTANT)
+	    {
+	      /* Case 8: X + c1 - (X - c2) = c1 + c2.  */
+	      if (e2_op2->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op1, e2_op1) == 0)
+		{
+		  mpz_add (*result, e1_op2->value.integer,
+			   e2_op2->value.integer);
+		  return true;
+		}
+	    }
+	  if (e1_op1->expr_type == EXPR_CONSTANT)
+	    {
+	      /* Case 9: c1 + X - (X - c2) = c1 + c2.  */
+	      if (e2_op2->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op2, e2_op1) == 0)
+		{
+		  mpz_add (*result, e1_op1->value.integer,
+			   e2_op2->value.integer);
+		  return true;
+		}
+	    }
+	}
+    }
+
+  if (e1->expr_type == EXPR_OP && e1->value.op.op == INTRINSIC_MINUS)
+    {
+      e1_op1 = discard_nops (e1->value.op.op1);
+      e1_op2 = discard_nops (e1->value.op.op2);
+
+      if (e1_op2->expr_type == EXPR_CONSTANT)
+	{
+	  /* Case 10: (X - c1) - X = -c1  */
+
+	  if (gfc_dep_compare_expr (e1_op1, e2) == 0)
+	    {
+	      mpz_neg (*result, e1_op2->value.integer);
+	      return true;
+	    }
+
+	  if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_PLUS)
+	    {
+	      e2_op1 = discard_nops (e2->value.op.op1);
+	      e2_op2 = discard_nops (e2->value.op.op2);
+
+	      /* Case 11: (X - c1) - (X + c2) = -( c1 + c2).  */
+	      if (e2_op2->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op1, e2_op1) == 0)
+		{
+		  mpz_add (*result, e1_op2->value.integer,
+			   e2_op2->value.integer);
+		  mpz_neg (*result, *result);
+		  return true;
+		}
+
+	      /* Case 12: X - c1 - (c2 + X) = - (c1 + c2).  */
+	      if (e2_op1->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op1, e2_op2) == 0)
+		{
+		  mpz_add (*result, e1_op2->value.integer,
+			   e2_op1->value.integer);
+		  mpz_neg (*result, *result);
+		  return true;
+		}
+	    }
+
+	  if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_MINUS)
+	    {
+	      e2_op1 = discard_nops (e2->value.op.op1);
+	      e2_op2 = discard_nops (e2->value.op.op2);
+
+	      /* Case 13: (X - c1) - (X - c2) = c2 - c1.  */
+	      if (e2_op2->expr_type == EXPR_CONSTANT
+		  && gfc_dep_compare_expr (e1_op1, e2_op1) == 0)
+		{
+		  mpz_sub (*result, e2_op2->value.integer,
+			   e1_op2->value.integer);
+		  return true;
+		}
+	    }
+	}
+      if (e1_op1->expr_type == EXPR_CONSTANT)
+	{
+	  if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_MINUS)
+	    {
+	      e2_op1 = discard_nops (e2->value.op.op1);
+	      e2_op2 = discard_nops (e2->value.op.op2);
+	      
+	      /* Case 14: (c1 - X) - (c2 - X) == c1 - c2.  */
+	      if (gfc_dep_compare_expr (e1_op2, e2_op2) == 0)
+		{
+		  mpz_sub (*result, e1_op1->value.integer,
+			   e2_op1->value.integer);
+		    return true;
+		}
+	    }
+
+	}
+    }
+
+  if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_PLUS)
+    {
+      e2_op1 = discard_nops (e2->value.op.op1);
+      e2_op2 = discard_nops (e2->value.op.op2);
+
+      /* Case 15: X - (X + c2) = -c2.  */
+      if (e2_op2->expr_type == EXPR_CONSTANT
+	  && gfc_dep_compare_expr (e1, e2_op1) == 0)
+	{
+	  mpz_neg (*result, e2_op2->value.integer);
+	  return true;
+	}
+      /* Case 16: X - (c2 + X) = -c2.  */
+      if (e2_op1->expr_type == EXPR_CONSTANT
+	  && gfc_dep_compare_expr (e1, e2_op2) == 0)
+	{
+	  mpz_neg (*result, e2_op1->value.integer);
+	  return true;
+	}
+    }
+
+  if (e2->expr_type == EXPR_OP && e2->value.op.op == INTRINSIC_MINUS)
+    {
+      e2_op1 = discard_nops (e2->value.op.op1);
+      e2_op2 = discard_nops (e2->value.op.op2);
+
+      /* Case 17: X - (X - c2) = c2.  */
+      if (e2_op2->expr_type == EXPR_CONSTANT
+	  && gfc_dep_compare_expr (e1, e2_op1) == 0)
+	{
+	  mpz_set (*result, e2_op2->value.integer);
+	  return true;
+	}
+    }
+
+  if (gfc_dep_compare_expr (e1, e2) == 0)
+    {
+      /* Case 18: X - X = 0.  */
+      mpz_set_si (*result, 0);
+      return true;
+    }
+
+  mpz_clear (*result);
+  return false;
+}
 
 /* Returns 1 if the two ranges are the same and 0 if they are not (or if the
    results are indeterminate). 'n' is the dimension to compare.  */
@@ -724,7 +969,9 @@ gfc_check_argument_var_dependency (gfc_expr *var, sym_intent intent,
       return 0;
 
     case EXPR_ARRAY:
-      return gfc_check_dependency (var, expr, 1);
+      /* the scalarizer always generates a temporary for array constructors,
+	 so there is no dependency.  */
+      return 0;
 
     case EXPR_FUNCTION:
       if (intent != INTENT_IN)
@@ -934,7 +1181,7 @@ check_data_pointer_types (gfc_expr *expr1, gfc_expr *expr2)
   bool seen_component_ref;
 
   if (expr1->expr_type != EXPR_VARIABLE
-	|| expr1->expr_type != EXPR_VARIABLE)
+	|| expr2->expr_type != EXPR_VARIABLE)
     return false;
 
   sym1 = expr1->symtree->n.sym;
@@ -1140,6 +1387,7 @@ check_section_vs_section (gfc_array_ref *l_ar, gfc_array_ref *r_ar, int n)
   int r_dir;
   int stride_comparison;
   int start_comparison;
+  mpz_t tmp;
 
   /* If they are the same range, return without more ado.  */
   if (is_same_range (l_ar, r_ar, n))
@@ -1275,24 +1523,20 @@ check_section_vs_section (gfc_array_ref *l_ar, gfc_array_ref *r_ar, int n)
      (l_start - r_start) / gcd(l_stride, r_stride) is
      nonzero.
      TODO:
-       - Handle cases where x is an expression.
        - Cases like a(1:4:2) = a(2:3) are still not handled.
   */
 
 #define IS_CONSTANT_INTEGER(a) ((a) && ((a)->expr_type == EXPR_CONSTANT) \
 			      && (a)->ts.type == BT_INTEGER)
 
-  if (IS_CONSTANT_INTEGER(l_start) && IS_CONSTANT_INTEGER(r_start)
-      && IS_CONSTANT_INTEGER(l_stride) && IS_CONSTANT_INTEGER(r_stride))
+  if (IS_CONSTANT_INTEGER (l_stride) && IS_CONSTANT_INTEGER (r_stride)
+      && gfc_dep_difference (l_start, r_start, &tmp))
     {
-      mpz_t gcd, tmp;
+      mpz_t gcd;
       int result;
 
       mpz_init (gcd);
-      mpz_init (tmp);
-
       mpz_gcd (gcd, l_stride->value.integer, r_stride->value.integer);
-      mpz_sub (tmp, l_start->value.integer, r_start->value.integer);
 
       mpz_fdiv_r (tmp, tmp, gcd);
       result = mpz_cmp_si (tmp, 0L);
@@ -1779,7 +2023,6 @@ int
 gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
 {
   int n;
-  int m;
   gfc_dependency fin_dep;
   gfc_dependency this_dep;
 
@@ -1829,15 +2072,25 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
 	      break;
 	    }
 
-	  /* Index for the reverse array.  */
-	  m = -1;
 	  for (n=0; n < lref->u.ar.dimen; n++)
 	    {
-	      /* Assume dependency when either of array reference is vector
-		 subscript.  */
+	      /* Handle dependency when either of array reference is vector
+		 subscript. There is no dependency if the vector indices
+		 are equal or if indices are known to be different in a
+		 different dimension.  */
 	      if (lref->u.ar.dimen_type[n] == DIMEN_VECTOR
 		  || rref->u.ar.dimen_type[n] == DIMEN_VECTOR)
-		return 1;
+		{
+		  if (lref->u.ar.dimen_type[n] == DIMEN_VECTOR 
+		      && rref->u.ar.dimen_type[n] == DIMEN_VECTOR
+		      && gfc_dep_compare_expr (lref->u.ar.start[n],
+					       rref->u.ar.start[n]) == 0)
+		    this_dep = GFC_DEP_EQUAL;
+		  else
+		    this_dep = GFC_DEP_OVERLAP;
+
+		  goto update_fin_dep;
+		}
 
 	      if (lref->u.ar.dimen_type[n] == DIMEN_RANGE
 		  && rref->u.ar.dimen_type[n] == DIMEN_RANGE)
@@ -1865,49 +2118,45 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
 		 The ability to reverse or not is set by previous conditions
 		 in this dimension.  If reversal is not activated, the
 		 value GFC_DEP_BACKWARD is reset to GFC_DEP_OVERLAP.  */
-
-	      /* Get the indexing right for the scalarizing loop. If this
-		 is an element, there is no corresponding loop.  */
-	      if (lref->u.ar.dimen_type[n] != DIMEN_ELEMENT)
-		m++;
-
 	      if (rref->u.ar.dimen_type[n] == DIMEN_RANGE
 		    && lref->u.ar.dimen_type[n] == DIMEN_RANGE)
 		{
 		  /* Set reverse if backward dependence and not inhibited.  */
-		  if (reverse && reverse[m] == GFC_ENABLE_REVERSE)
-		    reverse[m] = (this_dep == GFC_DEP_BACKWARD) ?
-			         GFC_REVERSE_SET : reverse[m];
+		  if (reverse && reverse[n] == GFC_ENABLE_REVERSE)
+		    reverse[n] = (this_dep == GFC_DEP_BACKWARD) ?
+			         GFC_REVERSE_SET : reverse[n];
 
 		  /* Set forward if forward dependence and not inhibited.  */
-		  if (reverse && reverse[m] == GFC_ENABLE_REVERSE)
-		    reverse[m] = (this_dep == GFC_DEP_FORWARD) ?
-			         GFC_FORWARD_SET : reverse[m];
+		  if (reverse && reverse[n] == GFC_ENABLE_REVERSE)
+		    reverse[n] = (this_dep == GFC_DEP_FORWARD) ?
+			         GFC_FORWARD_SET : reverse[n];
 
 		  /* Flag up overlap if dependence not compatible with
 		     the overall state of the expression.  */
-		  if (reverse && reverse[m] == GFC_REVERSE_SET
+		  if (reverse && reverse[n] == GFC_REVERSE_SET
 		        && this_dep == GFC_DEP_FORWARD)
 		    {
-	              reverse[m] = GFC_INHIBIT_REVERSE;
+	              reverse[n] = GFC_INHIBIT_REVERSE;
 		      this_dep = GFC_DEP_OVERLAP;
 		    }
-		  else if (reverse && reverse[m] == GFC_FORWARD_SET
+		  else if (reverse && reverse[n] == GFC_FORWARD_SET
 		        && this_dep == GFC_DEP_BACKWARD)
 		    {
-	              reverse[m] = GFC_INHIBIT_REVERSE;
+	              reverse[n] = GFC_INHIBIT_REVERSE;
 		      this_dep = GFC_DEP_OVERLAP;
 		    }
 
 		  /* If no intention of reversing or reversing is explicitly
 		     inhibited, convert backward dependence to overlap.  */
 		  if ((reverse == NULL && this_dep == GFC_DEP_BACKWARD)
-		      || (reverse != NULL && reverse[m] == GFC_INHIBIT_REVERSE))
+		      || (reverse != NULL && reverse[n] == GFC_INHIBIT_REVERSE))
 		    this_dep = GFC_DEP_OVERLAP;
 		}
 
 	      /* Overlap codes are in order of priority.  We only need to
 		 know the worst one.*/
+
+	    update_fin_dep:
 	      if (this_dep > fin_dep)
 		fin_dep = this_dep;
 	    }

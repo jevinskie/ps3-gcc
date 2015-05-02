@@ -2,8 +2,7 @@
 /* { dg-options "-mmacosx-version-min=10.1" } */
 /* { dg-do run { target *-*-darwin* } } */
 
-int
-main ()
+int main(void)
 {
 #if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ != 1010
   fail me;

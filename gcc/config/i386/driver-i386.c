@@ -1,5 +1,5 @@
 /* Subroutines for the gcc driver.
-   Copyright (C) 2006-2013 Free Software Foundation, Inc.
+   Copyright (C) 2006-2014 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -408,6 +408,8 @@ const char *host_detect_local_cpu (int argc, const char **argv)
   unsigned int has_rdrnd = 0, has_f16c = 0, has_fsgsbase = 0;
   unsigned int has_rdseed = 0, has_prfchw = 0, has_adx = 0;
   unsigned int has_osxsave = 0, has_fxsr = 0, has_xsave = 0, has_xsaveopt = 0;
+  unsigned int has_avx512er = 0, has_avx512pf = 0, has_avx512cd = 0;
+  unsigned int has_avx512f = 0, has_sha = 0, has_prefetchwt1 = 0;
 
   bool arch;
 
@@ -479,6 +481,13 @@ const char *host_detect_local_cpu (int argc, const char **argv)
       has_fsgsbase = ebx & bit_FSGSBASE;
       has_rdseed = ebx & bit_RDSEED;
       has_adx = ebx & bit_ADX;
+      has_avx512f = ebx & bit_AVX512F;
+      has_avx512er = ebx & bit_AVX512ER;
+      has_avx512pf = ebx & bit_AVX512PF;
+      has_avx512cd = ebx & bit_AVX512CD;
+      has_sha = ebx & bit_SHA;
+
+      has_prefetchwt1 = ecx & bit_PREFETCHWT1;
     }
 
   if (max_level >= 13)
@@ -563,6 +572,8 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 	processor = PROCESSOR_GEODE;
       else if (has_movbe)
 	processor = PROCESSOR_BTVER2;
+      else if (has_avx2)
+        processor = PROCESSOR_BDVER4;
       else if (has_xsaveopt)
         processor = PROCESSOR_BDVER3;
       else if (has_bmi)
@@ -591,13 +602,13 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 	    case 6:
 	      if (model > 9)
 		/* Use the default detection procedure.  */
-		processor = PROCESSOR_GENERIC32;
+		processor = PROCESSOR_GENERIC;
 	      else if (model == 9)
 		cpu = "c3-2";
 	      else if (model >= 6)
 		cpu = "c3";
 	      else
-		processor = PROCESSOR_GENERIC32;
+		processor = PROCESSOR_GENERIC;
 	      break;
 	    case 5:
 	      if (has_3dnow)
@@ -605,11 +616,11 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 	      else if (has_mmx)
 		cpu = "winchip2-c6";
 	      else
-		processor = PROCESSOR_GENERIC32;
+		processor = PROCESSOR_GENERIC;
 	      break;
 	    default:
 	      /* We have no idea.  */
-	      processor = PROCESSOR_GENERIC32;
+	      processor = PROCESSOR_GENERIC;
 	    }
 	}
     }
@@ -631,7 +642,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 	  break;
 	default:
 	  /* We have no idea.  */
-	  processor = PROCESSOR_GENERIC32;
+	  processor = PROCESSOR_GENERIC;
 	}
     }
 
@@ -654,8 +665,13 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 	{
 	case 0x1c:
 	case 0x26:
-	  /* Atom.  */
-	  cpu = "atom";
+	  /* Bonnell.  */
+	  cpu = "bonnell";
+	  break;
+	case 0x37:
+	case 0x4d:
+	  /* Silvermont.  */
+	  cpu = "silvermont";
 	  break;
 	case 0x0f:
 	  /* Merom.  */
@@ -669,55 +685,60 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 	case 0x1f:
 	case 0x2e:
 	  /* Nehalem.  */
+	  cpu = "nehalem";
+	  break;
 	case 0x25:
 	case 0x2c:
 	case 0x2f:
 	  /* Westmere.  */
-	  cpu = "corei7";
+	  cpu = "westmere";
 	  break;
 	case 0x2a:
 	case 0x2d:
 	  /* Sandy Bridge.  */
-	  cpu = "corei7-avx";
+	  cpu = "sandybridge";
 	  break;
 	case 0x3a:
 	case 0x3e:
 	  /* Ivy Bridge.  */
-	  cpu = "core-avx-i";
+	  cpu = "ivybridge";
 	  break;
 	case 0x3c:
 	case 0x45:
 	case 0x46:
 	  /* Haswell.  */
-	  cpu = "core-avx2";
+	  cpu = "haswell";
 	  break;
 	default:
 	  if (arch)
 	    {
 	      /* This is unknown family 0x6 CPU.  */
-	      if (has_avx2)
+	      if (has_adx)
+		cpu = "broadwell";
+	      else if (has_avx2)
 		/* Assume Haswell.  */
-		cpu = "core-avx2";
+		cpu = "haswell";
 	      else if (has_avx)
 		/* Assume Sandy Bridge.  */
-		cpu = "corei7-avx";
+		cpu = "sandybridge";
 	      else if (has_sse4_2)
-		/* Assume Core i7.  */
-		cpu = "corei7";
+		{
+		  if (has_movbe)
+		    /* Assume Silvermont.  */
+		    cpu = "silvermont";
+		  else
+		    /* Assume Nehalem.  */
+		    cpu = "nehalem";
+		}
 	      else if (has_ssse3)
 		{
 		  if (has_movbe)
-		    /* Assume Atom.  */
-		    cpu = "atom";
+		    /* Assume Bonnell.  */
+		    cpu = "bonnell";
 		  else
 		    /* Assume Core 2.  */
 		    cpu = "core2";
 		}
-	      else if (has_longmode)
-		/* Perhaps some emulator?  Assume x86-64, otherwise gcc
-		   -march=native would be unusable for 64-bit compilations,
-		   as all the CPUs below are 32-bit only.  */
-		cpu = "x86-64";
 	      else if (has_sse3)
 		/* It is Core Duo.  */
 		cpu = "pentium-m";
@@ -784,6 +805,9 @@ const char *host_detect_local_cpu (int argc, const char **argv)
     case PROCESSOR_BDVER3:
       cpu = "bdver3";
       break;
+    case PROCESSOR_BDVER4:
+      cpu = "bdver4";
+      break;
     case PROCESSOR_BTVER1:
       cpu = "btver1";
       break;
@@ -819,10 +843,18 @@ const char *host_detect_local_cpu (int argc, const char **argv)
 
   if (arch)
     {
+      const char *mmx = has_mmx ? " -mmmx" : " -mno-mmx";
+      const char *mmx3dnow = has_3dnow ? " -m3dnow" : " -mno-3dnow";
+      const char *sse = has_sse ? " -msse" : " -mno-sse";
+      const char *sse2 = has_sse2 ? " -msse2" : " -mno-sse2";
+      const char *sse3 = has_sse3 ? " -msse3" : " -mno-sse3";
+      const char *ssse3 = has_ssse3 ? " -mssse3" : " -mno-ssse3";
+      const char *sse4a = has_sse4a ? " -msse4a" : " -mno-sse4a";
       const char *cx16 = has_cmpxchg16b ? " -mcx16" : " -mno-cx16";
       const char *sahf = has_lahf_lm ? " -msahf" : " -mno-sahf";
       const char *movbe = has_movbe ? " -mmovbe" : " -mno-movbe";
-      const char *ase = has_aes ? " -maes" : " -mno-aes";
+      const char *aes = has_aes ? " -maes" : " -mno-aes";
+      const char *sha = has_sha ? " -msha" : " -mno-sha";
       const char *pclmul = has_pclmul ? " -mpclmul" : " -mno-pclmul";
       const char *popcnt = has_popcnt ? " -mpopcnt" : " -mno-popcnt";
       const char *abm = has_abm ? " -mabm" : " -mno-abm";
@@ -849,12 +881,19 @@ const char *host_detect_local_cpu (int argc, const char **argv)
       const char *fxsr = has_fxsr ? " -mfxsr" : " -mno-fxsr";
       const char *xsave = has_xsave ? " -mxsave" : " -mno-xsave";
       const char *xsaveopt = has_xsaveopt ? " -mxsaveopt" : " -mno-xsaveopt";
+      const char *avx512f = has_avx512f ? " -mavx512f" : " -mno-avx512f";
+      const char *avx512er = has_avx512er ? " -mavx512er" : " -mno-avx512er";
+      const char *avx512cd = has_avx512cd ? " -mavx512cd" : " -mno-avx512cd";
+      const char *avx512pf = has_avx512pf ? " -mavx512pf" : " -mno-avx512pf";
+      const char *prefetchwt1 = has_prefetchwt1 ? " -mprefetchwt1" : " -mno-prefetchwt1";
 
-      options = concat (options, cx16, sahf, movbe, ase, pclmul,
+      options = concat (options, mmx, mmx3dnow, sse, sse2, sse3, ssse3,
+			sse4a, cx16, sahf, movbe, aes, sha, pclmul,
 			popcnt, abm, lwp, fma, fma4, xop, bmi, bmi2,
 			tbm, avx, avx2, sse4_2, sse4_1, lzcnt, rtm,
 			hle, rdrnd, f16c, fsgsbase, rdseed, prfchw, adx,
-			fxsr, xsave, xsaveopt, NULL);
+			fxsr, xsave, xsaveopt, avx512f, avx512er,
+			avx512cd, avx512pf, prefetchwt1, NULL);
     }
 
 done:

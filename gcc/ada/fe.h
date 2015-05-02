@@ -6,7 +6,7 @@
  *                                                                          *
  *                              C Header File                               *
  *                                                                          *
- *          Copyright (C) 1992-2012, Free Software Foundation, Inc.         *
+ *          Copyright (C) 1992-2013, Free Software Foundation, Inc.         *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -184,6 +184,7 @@ extern Boolean In_Same_Source_Unit              (Node_Id, Node_Id);
 #define Exception_Mechanism            opt__exception_mechanism
 #define Generate_SCO_Instance_Table    opt__generate_sco_instance_table
 #define Global_Discard_Names           opt__global_discard_names
+#define Float_Format                   opt__float_format
 
 typedef enum {Setjmp_Longjmp, Back_End_Exceptions} Exception_Mechanism_Type;
 
@@ -193,6 +194,7 @@ extern Boolean Exception_Locations_Suppressed;
 extern Exception_Mechanism_Type Exception_Mechanism;
 extern Boolean Generate_SCO_Instance_Table;
 extern Boolean Global_Discard_Names;
+extern Char Float_Format;
 
 /* restrict: */
 
@@ -263,10 +265,14 @@ extern void Set_Has_No_Elaboration_Code	(Node_Id, Boolean);
 /* targparm: */
 
 #define Backend_Overflow_Checks_On_Target targparm__backend_overflow_checks_on_target
+#define Machine_Overflows_On_Target targparm__machine_overflows_on_target
+#define Signed_Zeros_On_Target targparm__signed_zeros_on_target
 #define Stack_Check_Probes_On_Target targparm__stack_check_probes_on_target
 #define Stack_Check_Limits_On_Target targparm__stack_check_limits_on_target
 
 extern Boolean Backend_Overflow_Checks_On_Target;
+extern Boolean Machine_Overflows_On_Target;
+extern Boolean Signed_Zeros_On_Target;
 extern Boolean Stack_Check_Probes_On_Target;
 extern Boolean Stack_Check_Limits_On_Target;
 

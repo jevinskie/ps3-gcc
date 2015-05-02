@@ -4,6 +4,3 @@
 /* { dg-options "-mcpu=power7 -O0 -m64" } */
 
 long foo (void) { return 0; }
-
-/* { dg-final { scan-assembler-not "xxlor" } } */
-/* { dg-final { scan-assembler-not "stfd" } } */

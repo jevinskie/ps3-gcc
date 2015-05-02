@@ -1,5 +1,5 @@
 // -*- C++ -*- The GNU C++ exception personality routine.
-// Copyright (C) 2001-2013 Free Software Foundation, Inc.
+// Copyright (C) 2001-2014 Free Software Foundation, Inc.
 //
 // This file is part of GCC.
 //
@@ -378,12 +378,6 @@ PERSONALITY_FUNCTION (int version,
   switch (state & _US_ACTION_MASK)
     {
     case _US_VIRTUAL_UNWIND_FRAME:
-      // If the unwind state pattern is
-      // _US_VIRTUAL_UNWIND_FRAME | _US_FORCE_UNWIND
-      // then we don't need to search for any handler as it is not a real
-      // exception. Just unwind the stack.
-      if (state & _US_FORCE_UNWIND)
-	CONTINUE_UNWINDING;
       actions = _UA_SEARCH_PHASE;
       break;
 

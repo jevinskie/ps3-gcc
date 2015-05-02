@@ -1,5 +1,5 @@
 /* Subroutines used for code generation on the Renesas M32R cpu.
-   Copyright (C) 1996-2013 Free Software Foundation, Inc.
+   Copyright (C) 1996-2014 Free Software Foundation, Inc.
 
    This file is part of GCC.
 
@@ -22,6 +22,10 @@
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
+#include "stor-layout.h"
+#include "varasm.h"
+#include "stringpool.h"
+#include "calls.h"
 #include "rtl.h"
 #include "regs.h"
 #include "hard-reg-set.h"
@@ -1309,8 +1313,7 @@ m32r_is_insn (rtx insn)
 {
   return (NONDEBUG_INSN_P (insn)
 	  && GET_CODE (PATTERN (insn)) != USE
-	  && GET_CODE (PATTERN (insn)) != CLOBBER
-	  && GET_CODE (PATTERN (insn)) != ADDR_VEC);
+	  && GET_CODE (PATTERN (insn)) != CLOBBER);
 }
 
 /* Increase the priority of long instructions so that the

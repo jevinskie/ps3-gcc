@@ -1,4 +1,4 @@
-/* Copyright (C) 2002-2013 Free Software Foundation, Inc.
+/* Copyright (C) 2002-2014 Free Software Foundation, Inc.
    Contributed by Andy Vaught
    F2003 I/O support contributed by Jerry DeLisle
 
@@ -186,8 +186,14 @@ typedef enum
 unit_encoding;
 
 typedef enum
-{ ROUND_UP, ROUND_DOWN, ROUND_ZERO, ROUND_NEAREST, ROUND_COMPATIBLE,
-  ROUND_PROCDEFINED, ROUND_UNSPECIFIED }
+{ ROUND_UP = GFC_FPE_UPWARD,
+  ROUND_DOWN = GFC_FPE_DOWNWARD,
+  ROUND_ZERO = GFC_FPE_TOWARDZERO,
+  ROUND_NEAREST = GFC_FPE_TONEAREST,
+  ROUND_COMPATIBLE = 10, /* round away from zero.  */
+  ROUND_PROCDEFINED, /* Here as ROUND_NEAREST. */
+  ROUND_UNSPECIFIED /* Should never occur. */
+}
 unit_round;
 
 /* NOTE: unit_sign must correspond with the sign_status enumerator in

@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2013, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -170,6 +170,22 @@ package body Uintp is
    --
    --  If Discard_Quotient is True, Quotient is set to No_Uint
    --  If Discard_Remainder is True, Remainder is set to No_Uint
+
+   function Vector_To_Uint
+     (In_Vec   : UI_Vector;
+      Negative : Boolean) return Uint;
+   --  Functions that calculate values in UI_Vectors, call this function to
+   --  create and return the Uint value. In_Vec contains the multiple precision
+   --  (Base) representation of a non-negative value. Leading zeroes are
+   --  permitted. Negative is set if the desired result is the negative of the
+   --  given value. The result will be either the appropriate directly
+   --  represented value, or a table entry in the proper canonical format is
+   --  created and returned.
+   --
+   --  Note that Init_Operand puts a signed value in the result vector, but
+   --  Vector_To_Uint is always presented with a non-negative value. The
+   --  processing of signs is something that is done by the caller before
+   --  calling Vector_To_Uint.
 
    ------------
    -- Direct --
@@ -1501,7 +1517,7 @@ package body Uintp is
    --  possible, substituting Int arithmetic instead. See Knuth volume II,
    --  Algorithm L (page 329).
 
-   --  We use the same notation as Knuth (U_Hat standing for the obvious!)
+   --  We use the same notation as Knuth (U_Hat standing for the obvious)
 
    function UI_GCD (Uin, Vin : Uint) return Uint is
       U, V : Uint;

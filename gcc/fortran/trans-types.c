@@ -1,5 +1,5 @@
 /* Backend support for Fortran 95 basic types and derived types.
-   Copyright (C) 2002-2013 Free Software Foundation, Inc.
+   Copyright (C) 2002-2014 Free Software Foundation, Inc.
    Contributed by Paul Brook <paul@nowt.org>
    and Steven Bosscher <s.bosscher@student.tudelft.nl>
 
@@ -34,6 +34,8 @@ along with GCC; see the file COPYING3.  If not see
 			   FLOAT_TYPE_SIZE, DOUBLE_TYPE_SIZE,
 			   LONG_DOUBLE_TYPE_SIZE and LIBGCC2_HAS_TF_MODE.  */
 #include "tree.h"
+#include "stor-layout.h"
+#include "stringpool.h"
 #include "langhooks.h"	/* For iso-c-bindings.def.  */
 #include "target.h"
 #include "ggc.h"
@@ -132,7 +134,7 @@ int gfc_numeric_storage_size;
 int gfc_character_storage_size;
 
 
-gfc_try
+bool
 gfc_check_any_c_kind (gfc_typespec *ts)
 {
   int i;
@@ -144,10 +146,10 @@ gfc_check_any_c_kind (gfc_typespec *ts)
          Fortran kind being used exists in at least some form for C.  */
       if (c_interop_kinds_table[i].f90_type == ts->type &&
           c_interop_kinds_table[i].value == ts->kind)
-        return SUCCESS;
+        return true;
     }
 
-  return FAILURE;
+  return false;
 }
 
 
@@ -338,12 +340,11 @@ gfc_init_c_interop_kinds (void)
   strncpy (c_interop_kinds_table[a].name, b, strlen(b) + 1); \
   c_interop_kinds_table[a].f90_type = BT_DERIVED; \
   c_interop_kinds_table[a].value = c;
-#define PROCEDURE(a,b) \
+#define NAMED_FUNCTION(a,b,c,d) \
   strncpy (c_interop_kinds_table[a].name, b, strlen(b) + 1); \
   c_interop_kinds_table[a].f90_type = BT_PROCEDURE; \
-  c_interop_kinds_table[a].value = 0;
-#include "iso-c-binding.def"
-#define NAMED_FUNCTION(a,b,c,d) \
+  c_interop_kinds_table[a].value = c;
+#define NAMED_SUBROUTINE(a,b,c,d) \
   strncpy (c_interop_kinds_table[a].name, b, strlen(b) + 1); \
   c_interop_kinds_table[a].f90_type = BT_PROCEDURE; \
   c_interop_kinds_table[a].value = c;
@@ -1100,6 +1101,12 @@ gfc_typenode_for_spec (gfc_typespec * spec)
 	basetype = gfc_get_character_type (spec->kind, spec->u.cl);
       break;
 
+    case BT_HOLLERITH:
+      /* Since this cannot be used, return a length one character.  */
+      basetype = gfc_get_character_type_len (gfc_default_character_kind,
+					     gfc_index_one_node);
+      break;
+
     case BT_DERIVED:
     case BT_CLASS:
       basetype = gfc_get_derived_type (spec->u.derived);
@@ -1111,11 +1118,11 @@ gfc_typenode_for_spec (gfc_typespec * spec)
          type and kind to fit a (void *) and the basetype returned was a
          ptr_type_node.  We need to pass up this new information to the
          symbol that was declared of type C_PTR or C_FUNPTR.  */
-      if (spec->u.derived->attr.is_iso_c)
+      if (spec->u.derived->ts.f90_type == BT_VOID)
         {
-          spec->type = spec->u.derived->ts.type;
-          spec->kind = spec->u.derived->ts.kind;
-          spec->f90_type = spec->u.derived->ts.f90_type;
+          spec->type = BT_INTEGER;
+          spec->kind = gfc_index_integer_kind;
+          spec->f90_type = BT_VOID;
         }
       break;
     case BT_VOID:
@@ -1180,7 +1187,7 @@ gfc_get_element_type (tree type)
       element = TREE_TYPE (element);
 
       /* For arrays, which are not scalar coarrays.  */
-      if (TREE_CODE (element) == ARRAY_TYPE)
+      if (TREE_CODE (element) == ARRAY_TYPE && !TYPE_STRING_FLAG (element))
 	element = TREE_TYPE (element);
     }
 
@@ -2349,7 +2356,7 @@ gfc_get_derived_type (gfc_symbol * derived)
     derived = gfc_find_dt_in_generic (derived);
 
   /* See if it's one of the iso_c_binding derived types.  */
-  if (derived->attr.is_iso_c == 1)
+  if (derived->attr.is_iso_c == 1 || derived->ts.f90_type == BT_VOID)
     {
       if (derived->backend_decl)
 	return derived->backend_decl;
@@ -2370,19 +2377,16 @@ gfc_get_derived_type (gfc_symbol * derived)
     }
 
   /* If use associated, use the module type for this one.  */
-  if (gfc_option.flag_whole_file
-	&& derived->backend_decl == NULL
-	&& derived->attr.use_assoc
-	&& derived->module
-	&& gfc_get_module_backend_decl (derived))
+  if (derived->backend_decl == NULL
+      && derived->attr.use_assoc
+      && derived->module
+      && gfc_get_module_backend_decl (derived))
     goto copy_derived_types;
 
-  /* If a whole file compilation, the derived types from an earlier
-     namespace can be used as the canonical type.  */
-  if (gfc_option.flag_whole_file
-	&& derived->backend_decl == NULL
-	&& !derived->attr.use_assoc
-	&& gfc_global_ns_list)
+  /* The derived types from an earlier namespace can be used as the
+     canonical type.  */
+  if (derived->backend_decl == NULL && !derived->attr.use_assoc
+      && gfc_global_ns_list)
     {
       for (ns = gfc_global_ns_list;
 	   ns->translated && !got_canonical;
@@ -2482,12 +2486,15 @@ gfc_get_derived_type (gfc_symbol * derived)
         field_type = c->ts.u.derived->backend_decl;
       else
 	{
-	  if (c->ts.type == BT_CHARACTER)
+	  if (c->ts.type == BT_CHARACTER && !c->ts.deferred)
 	    {
 	      /* Evaluate the string length.  */
 	      gfc_conv_const_charlen (c->ts.u.cl);
 	      gcc_assert (c->ts.u.cl->backend_decl);
 	    }
+	  else if (c->ts.type == BT_CHARACTER)
+	    c->ts.u.cl->backend_decl
+			= build_int_cst (gfc_charlen_type_node, 0);
 
 	  field_type = gfc_typenode_for_spec (&c->ts);
 	}
@@ -2707,11 +2714,11 @@ tree
 gfc_get_function_type (gfc_symbol * sym)
 {
   tree type;
-  vec<tree, va_gc> *typelist;
+  vec<tree, va_gc> *typelist = NULL;
   gfc_formal_arglist *f;
   gfc_symbol *arg;
-  int alternate_return;
-  bool is_varargs = true, recursive_type = false;
+  int alternate_return = 0;
+  bool is_varargs = true;
 
   /* Make sure this symbol is a function, a subroutine or the main
      program.  */
@@ -2723,14 +2730,11 @@ gfc_get_function_type (gfc_symbol * sym)
   if (sym->backend_decl == NULL)
     sym->backend_decl = error_mark_node;
   else if (sym->backend_decl == error_mark_node)
-    recursive_type = true;
+    goto arg_type_list_done;
   else if (sym->attr.proc_pointer)
     return TREE_TYPE (TREE_TYPE (sym->backend_decl));
   else
     return TREE_TYPE (sym->backend_decl);
-
-  alternate_return = 0;
-  typelist = NULL;
 
   if (sym->attr.entry_master)
     /* Additional parameter for selecting an entry point.  */
@@ -2779,13 +2783,6 @@ gfc_get_function_type (gfc_symbol * sym)
 
 	  if (arg->attr.flavor == FL_PROCEDURE)
 	    {
-	      /* We don't know in the general case which argument causes
-		 recursion.  But we know that it is a procedure.  So we give up
-		 creating the procedure argument type list at the first
-		 procedure argument.  */
-	      if (recursive_type)
-	        goto arg_type_list_done;
-
 	      type = gfc_get_function_type (arg);
 	      type = build_pointer_type (type);
 	    }
@@ -2839,10 +2836,10 @@ gfc_get_function_type (gfc_symbol * sym)
       || sym->attr.if_source != IFSRC_UNKNOWN)
     is_varargs = false;
 
-arg_type_list_done:
-
-  if (!recursive_type && sym->backend_decl == error_mark_node)
+  if (sym->backend_decl == error_mark_node)
     sym->backend_decl = NULL_TREE;
+
+arg_type_list_done:
 
   if (alternate_return)
     type = integer_type_node;
@@ -2881,7 +2878,7 @@ arg_type_list_done:
   else
     type = gfc_sym_type (sym);
 
-  if (is_varargs || recursive_type)
+  if (is_varargs)
     type = build_varargs_function_type_vec (type, typelist);
   else
     type = build_function_type_vec (type, typelist);

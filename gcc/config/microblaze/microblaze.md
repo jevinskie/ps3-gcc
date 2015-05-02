@@ -1,5 +1,5 @@
 ;; microblaze.md -- Machine description for Xilinx MicroBlaze processors.
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Contributed by Michael Eager <eager@eagercon.com>.
 
@@ -1119,6 +1119,18 @@
   }
 )
 
+;;Load and store reverse
+(define_insn "movsi4_rev"
+  [(set (match_operand:SI 0 "reg_or_mem_operand" "=r,Q")
+        (bswap:SI (match_operand:SF 1 "reg_or_mem_operand" "Q,r")))]
+  "TARGET_REORDER"
+  "@
+   lwr\t%0,%y1,r0
+   swr\t%1,%y0,r0"
+  [(set_attr "type"     "load,store")
+  (set_attr "mode"      "SI")
+  (set_attr "length"    "4,4")])
+
 ;; 32-bit floating point moves
 
 (define_expand "movsf"
@@ -1818,9 +1830,8 @@
 	(plus:SI (match_operand:SI 0 "register_operand" "d")
 		 (label_ref:SI (match_operand 1 "" ""))))
   (use (label_ref:SI (match_dup 1)))]
- "next_active_insn (insn) != 0
-  && GET_CODE (PATTERN (next_active_insn (insn))) == ADDR_DIFF_VEC
-  && PREV_INSN (next_active_insn (insn)) == operands[1]
+ "NEXT_INSN (operands[1]) != 0
+  && GET_CODE (PATTERN (NEXT_INSN (operands[1]))) == ADDR_DIFF_VEC
   && flag_pic"
   {
     output_asm_insn ("addk\t%0,%0,r20",operands);
@@ -2249,3 +2260,5 @@
   [(set_attr "type"     "arith")
   (set_attr "mode"      "SI")
   (set_attr "length"    "4")])
+
+(include "sync.md")

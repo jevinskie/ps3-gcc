@@ -1,6 +1,6 @@
 // <functional> -*- C++ -*-
 
-// Copyright (C) 2001-2013 Free Software Foundation, Inc.
+// Copyright (C) 2001-2014 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -184,38 +184,6 @@ _GLIBCXX_HAS_NESTED_TYPE(result_type)
     struct _Weak_result_type
     : _Weak_result_type_impl<typename remove_cv<_Functor>::type>
     { };
-
-  /// Determines if the type _Tp derives from unary_function.
-  template<typename _Tp>
-    struct _Derives_from_unary_function : __sfinae_types
-    {
-    private:
-      template<typename _T1, typename _Res>
-	static __one __test(const volatile unary_function<_T1, _Res>*);
-
-      // It's tempting to change "..." to const volatile void*, but
-      // that fails when _Tp is a function type.
-      static __two __test(...);
-
-    public:
-      static const bool value = sizeof(__test((_Tp*)0)) == 1;
-    };
-
-  /// Determines if the type _Tp derives from binary_function.
-  template<typename _Tp>
-    struct _Derives_from_binary_function : __sfinae_types
-    {
-    private:
-      template<typename _T1, typename _T2, typename _Res>
-	static __one __test(const volatile binary_function<_T1, _T2, _Res>*);
-
-      // It's tempting to change "..." to const volatile void*, but
-      // that fails when _Tp is a function type.
-      static __two __test(...);
-
-    public:
-      static const bool value = sizeof(__test((_Tp*)0)) == 1;
-    };
 
   /**
    * Invoke a function object, which may be either a member pointer or a
@@ -2181,15 +2149,8 @@ _GLIBCXX_HAS_NESTED_TYPE(result_type)
 	using _Invoke = decltype(__callable_functor(std::declval<_Functor&>())
 				 (std::declval<_ArgTypes>()...) );
 
-      // Used so the return type convertibility checks aren't done when
-      // performing overload resolution for copy construction/assignment.
-      template<typename _Tp>
-	using _NotSelf = __not_<is_same<_Tp, function>>;
-
       template<typename _Functor>
-	using _Callable
-	  = __and_<_NotSelf<_Functor>,
-		   __check_func_return_type<_Invoke<_Functor>, _Res>>;
+	using _Callable = __check_func_return_type<_Invoke<_Functor>, _Res>;
 
       template<typename _Cond, typename _Tp>
 	using _Requires = typename enable_if<_Cond::value, _Tp>::type;
@@ -2330,7 +2291,7 @@ _GLIBCXX_HAS_NESTED_TYPE(result_type)
        *  reference_wrapper<F>, this function will not throw.
        */
       template<typename _Functor>
-	_Requires<_Callable<typename decay<_Functor>::type>, function&>
+	_Requires<_Callable<_Functor>, function&>
 	operator=(_Functor&& __f)
 	{
 	  function(std::forward<_Functor>(__f)).swap(*this);
@@ -2439,9 +2400,9 @@ _GLIBCXX_HAS_NESTED_TYPE(result_type)
     {
       if (static_cast<bool>(__x))
 	{
-	  __x._M_manager(_M_functor, __x._M_functor, __clone_functor);
 	  _M_invoker = __x._M_invoker;
 	  _M_manager = __x._M_manager;
+	  __x._M_manager(_M_functor, __x._M_functor, __clone_functor);
 	}
     }
 

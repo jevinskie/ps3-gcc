@@ -1,5 +1,4 @@
 /* { dg-do compile } */
-/* { dg-options "-maltivec -mabi=altivec -std=gnu99 -mno-vsx -Wno-deprecated" } */
 
 /* Checks from the original ops.c that pass pointers to long or
    unsigned long for operations that support that in released versions

@@ -1,4 +1,4 @@
-/* Copyright (C) 2002-2013 Free Software Foundation, Inc.
+/* Copyright (C) 2002-2014 Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
 This file is part of the GNU Fortran runtime library (libgfortran).
@@ -27,6 +27,10 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 
 /* Environment scanner.  Examine the environment for controlling minor
@@ -833,7 +837,7 @@ void init_unformatted (variable * v)
     }
   else
     {
-      elist = xmallocarray (unit_count, sizeof (exception_t));
+      elist = xmalloc (unit_count * sizeof (exception_t));
       do_count = 0;
       p = val;
       do_parse ();

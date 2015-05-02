@@ -39,6 +39,7 @@ with Prj.Tree; use Prj.Tree;
 with Prj.Util; use Prj.Util;
 with Sdefault;
 with Snames;
+with Stringt;
 with Switch;   use Switch;
 with Table;
 with Targparm; use Targparm;
@@ -97,8 +98,6 @@ package body Clean is
    Project_File_Name : String_Access := null;
 
    Project_Node_Tree : Project_Node_Tree_Ref;
-
-   Root_Environment : Prj.Tree.Environment;
 
    Main_Project : Prj.Project_Id := Prj.No_Project;
 
@@ -1377,6 +1376,13 @@ package body Clean is
 
       Parse_Cmd_Line;
 
+      --  Add the default project search directories now, after the directories
+      --  that have been specified by switches -aP<dir>.
+
+      Prj.Env.Initialize_Default_Project_Path
+        (Root_Environment.Project_Path,
+         Target_Name => Sdefault.Target_Name.all);
+
       if Verbose_Mode then
          Display_Copyright;
       end if;
@@ -1411,6 +1417,12 @@ package body Clean is
 
          if Main_Project = No_Project then
             Fail ("""" & Project_File_Name.all & """ processing failed");
+
+         elsif Main_Project.Qualifier = Aggregate then
+            Fail ("aggregate projects are not supported");
+
+         elsif Aggregate_Libraries_In (Project_Tree) then
+            Fail ("aggregate library projects are not supported");
          end if;
 
          if Opt.Verbose_Mode then
@@ -1548,11 +1560,9 @@ package body Clean is
 
          Csets.Initialize;
          Snames.Initialize;
+         Stringt.Initialize;
 
          Prj.Tree.Initialize (Root_Environment, Gnatmake_Flags);
-         Prj.Env.Initialize_Default_Project_Path
-            (Root_Environment.Project_Path,
-             Target_Name => Sdefault.Target_Name.all);
 
          Project_Node_Tree := new Project_Node_Tree_Data;
          Prj.Tree.Initialize (Project_Node_Tree);
@@ -1729,6 +1739,7 @@ package body Clean is
 
                      when 'f' =>
                         Force_Deletions := True;
+                        Directories_Must_Exist_In_Projects := False;
 
                      when 'F' =>
                         Full_Path_Name_For_Brief_Errors := True;
