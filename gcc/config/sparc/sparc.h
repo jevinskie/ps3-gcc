@@ -329,6 +329,8 @@ extern enum cmodel sparc_cmodel;
 %{mcpu=sparclite86x:-Asparclite} \
 %{mcpu=f930:-Asparclite} %{mcpu=f934:-Asparclite} \
 %{mcpu=v8:-Av8} \
+%{mcpu=supersparc:-Av8} \
+%{mcpu=hypersparc:-Av8} \
 %{mcpu=leon:-Av8} \
 %{mv8plus:-Av8plus} \
 %{mcpu=v9:-Av9} \
@@ -1742,10 +1744,10 @@ extern int sparc_indent_opcode;
 #define TARGET_SUN_TLS TARGET_TLS
 #define TARGET_GNU_TLS 0
 
-#ifndef HAVE_AS_FMAF_HPC_VIS3
-#define AS_NIAGARA3_FLAG "b"
-#else
+#ifdef HAVE_AS_FMAF_HPC_VIS3
 #define AS_NIAGARA3_FLAG "d"
+#else
+#define AS_NIAGARA3_FLAG "b"
 #endif
 
 /* The number of Pmode words for the setjmp buffer.  */

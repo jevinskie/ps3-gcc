@@ -2061,7 +2061,8 @@ proc check_effective_target_arm_vfp_ok { } {
 # options.
 
 proc check_effective_target_arm_hard_vfp_ok { } {
-    if { [check_effective_target_arm32] } {
+    if { [check_effective_target_arm32]
+	 && ! [check-flags [list "" { *-*-* } { "-mfloat-abi=*" } { "-mfloat-abi=hard" }]] } {
 	return [check_no_compiler_messages arm_hard_vfp_ok executable {
 	    int main() { return 0;}
 	} "-mfpu=vfp -mfloat-abi=hard"]
@@ -2993,7 +2994,7 @@ proc check_effective_target_vect_widen_mult_qi_to_hi { } {
 	    set et_vect_widen_mult_qi_to_hi_saved 0
 	}
         if { [istarget powerpc*-*-*]
-              || ([istarget arm*-*-*] && [check_effective_target_arm_neon]) } {
+              || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]) } {
             set et_vect_widen_mult_qi_to_hi_saved 1
         }
     }
@@ -3027,7 +3028,7 @@ proc check_effective_target_vect_widen_mult_hi_to_si { } {
 	      || [istarget ia64-*-*]
 	      || [istarget i?86-*-*]
 	      || [istarget x86_64-*-*]
-              || ([istarget arm*-*-*] && [check_effective_target_arm_neon]) } {
+              || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]) } {
             set et_vect_widen_mult_hi_to_si_saved 1
         }
     }
@@ -3048,7 +3049,7 @@ proc check_effective_target_vect_widen_mult_qi_to_hi_pattern { } {
     } else {
         set et_vect_widen_mult_qi_to_hi_pattern_saved 0
         if { [istarget powerpc*-*-*]
-              || ([istarget arm*-*-*] && [check_effective_target_arm_neon]) } {
+              || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]) } {
             set et_vect_widen_mult_qi_to_hi_pattern_saved 1
         }
     }
@@ -3073,7 +3074,7 @@ proc check_effective_target_vect_widen_mult_hi_to_si_pattern { } {
               || [istarget ia64-*-*]
               || [istarget i?86-*-*]
               || [istarget x86_64-*-*]
-              || ([istarget arm*-*-*] && [check_effective_target_arm_neon]) } {
+              || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]) } {
             set et_vect_widen_mult_hi_to_si_pattern_saved 1
         }
     }
@@ -3203,7 +3204,7 @@ proc check_effective_target_vect_pack_trunc { } {
              || [istarget i?86-*-*]
              || [istarget x86_64-*-*]
              || [istarget spu-*-*]
-             || ([istarget arm*-*-*] && [check_effective_target_arm_neon]
+             || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]
 		 && [check_effective_target_arm_little_endian]) } {
             set et_vect_pack_trunc_saved 1
         }
@@ -3229,7 +3230,7 @@ proc check_effective_target_vect_unpack { } {
              || [istarget x86_64-*-*] 
              || [istarget spu-*-*]
              || [istarget ia64-*-*]
-             || ([istarget arm*-*-*] && [check_effective_target_arm_neon]
+             || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]
 		 && [check_effective_target_arm_little_endian]) } {
             set et_vect_unpack_saved 1
         }
@@ -3646,7 +3647,7 @@ proc check_effective_target_vect_multiple_sizes { } {
     global et_vect_multiple_sizes_saved
 
     set et_vect_multiple_sizes_saved 0
-    if { ([istarget arm*-*-*] && [check_effective_target_arm_neon]) } {
+    if { ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]) } {
        set et_vect_multiple_sizes_saved 1
     }
     if { ([istarget x86_64-*-*] || [istarget i?86-*-*]) } {
@@ -3818,7 +3819,7 @@ proc check_effective_target_sync_long_long_runtime { } {
 		}
 	    } ""
 	}]
-    } elseif { [istarget arm*-*-linux-gnueabi] } {
+    } elseif { [istarget arm*-*-linux-gnueabi*] } {
 	return [check_runtime sync_longlong_runtime {
 	    #include <stdlib.h>
 	    int main ()
@@ -3860,7 +3861,7 @@ proc check_effective_target_sync_int_long { } {
 	     || [istarget i?86-*-*]
 	     || [istarget x86_64-*-*]
 	     || [istarget alpha*-*-*] 
-	     || [istarget arm*-*-linux-gnueabi] 
+	     || [istarget arm*-*-linux-gnueabi*] 
 	     || [istarget bfin*-*linux*]
 	     || [istarget hppa*-*linux*]
 	     || [istarget s390*-*-*] 
@@ -3890,7 +3891,7 @@ proc check_effective_target_sync_char_short { } {
 	     || [istarget i?86-*-*]
 	     || [istarget x86_64-*-*]
 	     || [istarget alpha*-*-*] 
-	     || [istarget arm*-*-linux-gnueabi] 
+	     || [istarget arm*-*-linux-gnueabi*] 
 	     || [istarget hppa*-*linux*]
 	     || [istarget s390*-*-*] 
 	     || [istarget powerpc*-*-*]
