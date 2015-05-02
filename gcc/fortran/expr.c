@@ -3493,8 +3493,12 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue)
 	}
       else if (rvalue->expr_type == EXPR_FUNCTION)
 	{
-	  s2 = rvalue->symtree->n.sym->result;
-	  name = rvalue->symtree->n.sym->result->name;
+	  if (rvalue->value.function.esym)
+	    s2 = rvalue->value.function.esym->result;
+	  else
+	    s2 = rvalue->symtree->n.sym->result;
+
+	  name = s2->name;
 	}
       else
 	{
@@ -4191,7 +4195,7 @@ replace_comp (gfc_expr *expr, gfc_symbol *sym, int *i ATTRIBUTE_UNUSED)
   gfc_component *comp;
   comp = (gfc_component *)sym;
   if ((expr->expr_type == EXPR_VARIABLE 
-       || (expr->expr_type == EXPR_FUNCTION
+       || (expr->expr_type == EXPR_FUNCTION && !expr->value.function.isym
 	   && !gfc_is_intrinsic (expr->symtree->n.sym, 0, expr->where)))
       && expr->symtree->n.sym->ns == comp->ts.interface->formal_ns)
     {
