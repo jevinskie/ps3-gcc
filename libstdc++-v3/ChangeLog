@@ -1,3 +1,209 @@
+2013-05-31  Release Manager
+
+	* GCC 4.8.1 released.
+
+2013-05-28  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* src/c++11/compatibility-chrono.cc (steady_clock::now()): If
+	!_GLIBCXX_USE_GETTIMEOFDAY perform conversion inline instead of
+	calling non-existent from_time_t.
+
+2013-05-28  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* config/abi/post/solaris2.10/sparcv9/baseline_symbols.txt:
+	Regenerate.
+
+2013-05-26  Jakub Jelinek  <jakub@redhat.com>
+
+	Backported from mainline
+	2013-05-24  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/std/chrono: Wrap clocks in inline namespace _V2.
+	* src/c++11/chrono.cc: Same.
+	* src/c++11/compatibility-chrono.cc: Revert to previous chrono.cc
+	file, with default configure macros selected.
+
+	* config/abi/pre/gnu.ver (GLIBCXX_3.4.19): Use symbols from inline
+	namespace.
+	* config/abi/post/x86_64-linux-gnu/baseline_symbols.txt: Fix up.
+
+	* config/abi/post/i386-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/powerpc64-linux-gnu/32/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/x86_64-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/powerpc-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/s390-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/i486-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.10/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.10/amd64/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.10/sparcv9/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/solaris2.9/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.9/sparcv9/baseline_symbols.txt: Regenerated.
+
+2013-05-24  Jakub Jelinek  <jakub@redhat.com>
+
+	* src/c++11/chrono.cc: If _GLIBCXX_USE_CLOCK_GETTIME_SYSCALL,
+	include unistd.h and sys/syscall.h.  If _GLIBCXX_COMPATIBILITY_CXX0X,
+	don't define system_clock::is_steady, system_clock::now() and
+	steady_clock::is_steady.
+	(std::chrono::system_clock::now()): If
+	_GLIBCXX_USE_CLOCK_GETTIME_SYSCALL, call
+	syscall (SYS_clock_gettime, ...) instead of clock_gettime (...).
+	(std::chrono::system_clock::now()): Likewise.  Add weak attribute
+	if _GLIBCXX_COMPATIBILITY_CXX0X and compatibility-chrono.cc will
+	be non-empty.
+	* src/Makefile.am (cxx11_sources): Add compatibility-chrono.cc.
+	(compatibility-chrono.lo, compatibility-chrono.o): New goals.
+	* src/c++11/compatibility-chrono.cc: New file.
+	* acinclude.m4 (GLIBCXX_ENABLE_LIBSTDCXX_TIME): On linux*, check for
+	syscall (SYS_clock_gettime, CLOCK_MONOTONIC, &tp).
+	* testsuite/util/testsuite_abi.cc (check_version): Add
+	GLIBCXX_3.4.19 version and make it the latest.
+	* config/abi/pre/gnu.ver (_ZNSt6chrono12steady_clock3nowEv): Export
+	also @@GLIBCXX_3.4.19.
+	* config/abi/post/i386-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/powerpc64-linux-gnu/32/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/x86_64-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/powerpc-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/s390-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/i486-linux-gnu/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.10/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.10/amd64/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.10/sparcv9/baseline_symbols.txt:
+	Regenerated.
+	* config/abi/post/solaris2.9/baseline_symbols.txt: Regenerated.
+	* config/abi/post/solaris2.9/sparcv9/baseline_symbols.txt: Regenerated.
+	* config.h.in: Regenerated.
+	* src/Makefile.in: Regenerated.
+	* configure: Regenerated.
+
+2013-05-21  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	PR libstdc++/57336
+	* include/std/functional (__invoke): Do not form function types with
+	abstract return type.
+	* testsuite/20_util/reference_wrapper/invoke-3.cc: New.
+
+2013-05-15  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* include/bits/basic_string.h (getline): Fix doxygen comments.
+
+2013-05-14  Evgeniy Stepanov  <eugenis@google.com>
+
+	* src/c++11/system_error.cc (generic_category_instance): Add
+	initializer.
+	(system_category_instance): Likewise.
+	* src/c++11/future.cc (__fec): Likewise.
+
+2013-05-08  Andoni Morales Alastruey <ylatuya@gmail.com>
+
+	PR libstdc++/57212
+	* include/Makefile.am (_GLIBCXX___MINGW32_GLIBCXX___): Modify
+	to __MINGW32__.
+	* include/Makefile.in: Regenerated.
+
+2013-04-27  François Dumont  <fdumont@gcc.gnu.org>
+
+	* include/bits/hashtable_policy.h
+	(_Insert_base<>::insert<_It>(_It, _It)): Enable move semantics.
+	* testsuite/23_containers/unordered_set/insert/move_range.cc: New.
+
+2013-04-22  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/57010
+	* include/bits/stl_heap.h (pop_heap): Avoid self move-assignment.
+	* testsuite/25_algorithms/pop_heap/57010.cc: New.
+
+2013-04-09  Tom Tromey  <tromey@redhat.com>
+
+	* configure, config.h.in: Rebuild.
+	* configure.ac: Use GLIBCXX_CHECK_SDT_H.  Don't check for
+	sys/sdt.h.
+	* acinclude.m4 (GLIBCXX_CHECK_SDT_H): New defun.
+
+2013-04-04  Gerald Pfeifer  <gerald@pfeifer.com>
+
+	* doc/xml/manual/allocator.xml: Adjust link to Dr.Dobb's article.
+
+	* doc/xml/manual/appendix_contributing.xml: Adjust link to GNU
+	Coding Standards.
+
+	* doc/xml/manual/debug.xml: Adjust link for ThreadSanitizer.
+
+	* doc/xml/manual/debug_mode.xml: Adjust link for SafeSTL.
+
+	* doc/xml/manual/documentation_hacking.xml: Adjust Doxygen link.
+
+	* doc/xml/manual/messages.xml: Adjust link to Java API specs.
+
+	* doc/xml/manual/policy_data_structures: Remove direct link to
+	IBM Haifa Research Labs.
+
+	* doc/xml/manual/policy_data_structures_biblio.xml: Adjust links
+	for biblio.maverik_lowerbounds and biblio.nelson96stlpq.
+
+	* doc/xml/manual/profile_mode.xml: Adjust two links to acm.org
+	papers.
+
+	* doc/xml/manual/shared_ptr.xml: Use canonical address for
+	www.boost.org.
+
+2013-04-03  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/56834
+	* include/debug/array (tuple_size, tuple_element): Do not declare.
+	* include/profile/array: Likewise.
+	* testsuite/23_containers/array/tuple_interface/
+	tuple_element_debug_neg.cc: Adjust dg-error line number.
+
+2013-03-27  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/55977 (partial, std::vector and std::deque bits)
+	* include/bits/stl_vector.h (_M_range_initialize(_InputIterator,
+	_InputIterator, std::input_iterator_tag)): Use emplace_back.
+	* include/bits/deque.tcc (_M_range_initialize(_InputIterator,
+	_InputIterator, std::input_iterator_tag)): Likewise.
+	* testsuite/23_containers/vector/cons/55977.cc: New.
+	* testsuite/23_containers/deque/cons/55977.cc: Likewise.
+	* testsuite/23_containers/vector/requirements/dr438/assign_neg.cc:
+	Adjust dg-error line number.
+	* testsuite/23_containers/vector/requirements/dr438/insert_neg.cc:
+	Likewise.
+
+2013-03-27  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/55979
+	* include/bits/stl_list.h (_M_initialize_dispatch(_InputIterator,
+	_InputIterator, __false_type)): Use emplace_back.
+	* testsuite/23_containers/list/cons/55979.cc: New.
+	* testsuite/23_containers/list/modifiers/1.h: Adjust.
+	* testsuite/23_containers/list/requirements/dr438/assign_neg.cc:
+	Adjust dg-error line number.
+
+2013-03-24  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	PR libstdc++/56002
+	* include/std/mutex (lock_guard, unique_lock, lock): Define without
+	depending on _GLIBCXX_HAS_GTHREADS.
+	* testsuite/30_threads/lock_guard/cons/1.cc: Run on all targets.
+
+2013-03-22  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/56678
+	* include/std/chrono (__is_ratio): Uglify T.
+
 2013-03-22  Release Manager
 
 	* GCC 4.8.0 released.
