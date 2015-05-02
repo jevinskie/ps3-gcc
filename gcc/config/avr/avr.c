@@ -674,6 +674,16 @@ avr_regs_to_save (HARD_REG_SET *set)
   return count;
 }
 
+
+/* Implement `TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS' */
+
+static bool
+avr_allocate_stack_slots_for_args (void)
+{
+  return !cfun->machine->is_naked;
+}
+
+
 /* Return true if register FROM can be eliminated via register TO.  */
 
 static bool
@@ -8890,6 +8900,28 @@ avr_hard_regno_mode_ok (int regno, enum machine_mode mode)
 }
 
 
+/* Implement `HARD_REGNO_CALL_PART_CLOBBERED'.  */
+
+int
+avr_hard_regno_call_part_clobbered (unsigned regno, enum machine_mode mode)
+{
+  /* FIXME: This hook gets called with MODE:REGNO combinations that don't
+        represent valid hard registers like, e.g. HI:29.  Returning TRUE
+        for such registers can lead to performance degradation as mentioned
+        in PR53595.  Thus, report invalid hard registers as FALSE.  */
+  
+  if (!avr_hard_regno_mode_ok (regno, mode))
+    return 0;
+  
+  /* Return true if any of the following boundaries is crossed:
+     17/18, 27/28 and 29/30.  */
+  
+  return ((regno < 18 && regno + GET_MODE_SIZE (mode) > 18)
+          || (regno < REG_Y && regno + GET_MODE_SIZE (mode) > REG_Y)
+          || (regno < REG_Z && regno + GET_MODE_SIZE (mode) > REG_Z));
+}
+
+
 /* Implement `MODE_CODE_BASE_REG_CLASS'.  */
 
 enum reg_class
@@ -9894,7 +9926,7 @@ avr_mem_clobber (void)
 static void
 avr_expand_delay_cycles (rtx operands0)
 {
-  unsigned HOST_WIDE_INT cycles = UINTVAL (operands0);
+  unsigned HOST_WIDE_INT cycles = UINTVAL (operands0) & GET_MODE_MASK (SImode);
   unsigned HOST_WIDE_INT cycles_used;
   unsigned HOST_WIDE_INT loop_count;
   
@@ -10907,6 +10939,9 @@ avr_fold_builtin (tree fndecl, int n_args ATTRIBUTE_UNUSED, tree *arg,
 #define TARGET_FRAME_POINTER_REQUIRED avr_frame_pointer_required_p
 #undef  TARGET_CAN_ELIMINATE
 #define TARGET_CAN_ELIMINATE avr_can_eliminate
+
+#undef  TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS
+#define TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS avr_allocate_stack_slots_for_args
 
 #undef  TARGET_CLASS_LIKELY_SPILLED_P
 #define TARGET_CLASS_LIKELY_SPILLED_P avr_class_likely_spilled_p

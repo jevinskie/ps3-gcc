@@ -5817,12 +5817,9 @@ build_data_member_initialization (tree t, VEC(constructor_elt,gc) **vec)
 	member = op;
       else
 	{
-	  /* We don't put out anything for an empty base.  */
+	  /* This is an initializer for an empty base; keep it for now so
+	     we can check it in cxx_eval_bare_aggregate.  */
 	  gcc_assert (is_empty_class (TREE_TYPE (TREE_TYPE (member))));
-	  /* But if the initializer isn't constexpr, leave it in so we
-	     complain later.  */
-	  if (potential_constant_expression (init))
-	    return true;
 	}
     }
   if (TREE_CODE (member) == ADDR_EXPR)
@@ -5877,6 +5874,37 @@ check_constexpr_ctor_body (tree last, tree list)
       DECL_DECLARED_CONSTEXPR_P (current_function_decl) = false;
     }
   return ok;
+}
+
+/* VEC is a vector of constructor elements built up for the base and member
+   initializers of a constructor for TYPE.  They need to be in increasing
+   offset order, which they might not be yet if TYPE has a primary base
+   which is not first in the base-clause.  */
+
+static VEC(constructor_elt,gc) *
+sort_constexpr_mem_initializers (tree type, VEC(constructor_elt,gc) *vec)
+{
+  tree pri = CLASSTYPE_PRIMARY_BINFO (type);
+  constructor_elt elt;
+  int i;
+
+  if (pri == NULL_TREE
+      || pri == BINFO_BASE_BINFO (TYPE_BINFO (type), 0))
+    return vec;
+
+  /* Find the element for the primary base and move it to the beginning of
+     the vec.  */
+  pri = BINFO_TYPE (pri);
+  for (i = 1; ; ++i)
+    if (TREE_TYPE (VEC_index (constructor_elt, vec, i)->index) == pri)
+      break;
+
+  elt = *VEC_index (constructor_elt, vec, i);
+  for (; i > 0; --i)
+    VEC_replace (constructor_elt, vec, i,
+		 VEC_index (constructor_elt, vec, i-1));
+  VEC_replace (constructor_elt, vec, 0, &elt);
+  return vec;
 }
 
 /* Build compile-time evalable representations of member-initializer list
@@ -5935,6 +5963,7 @@ build_constexpr_constructor_member_initializers (tree type, tree body)
 	      return body;
 	    }
 	}
+      vec = sort_constexpr_mem_initializers (type, vec);
       return build_constructor (type, vec);
     }
   else
@@ -6053,14 +6082,16 @@ cx_check_missing_mem_inits (tree fun, tree body, bool complain)
 	{
 	  index = CONSTRUCTOR_ELT (body, i)->index;
 	  /* Skip base and vtable inits.  */
-	  if (TREE_CODE (index) != FIELD_DECL)
+	  if (TREE_CODE (index) != FIELD_DECL
+	      || DECL_ARTIFICIAL (index))
 	    continue;
 	}
       for (; field != index; field = DECL_CHAIN (field))
 	{
 	  tree ftype;
 	  if (TREE_CODE (field) != FIELD_DECL
-	      || (DECL_C_BIT_FIELD (field) && !DECL_NAME (field)))
+	      || (DECL_C_BIT_FIELD (field) && !DECL_NAME (field))
+	      || DECL_ARTIFICIAL (field))
 	    continue;
 	  ftype = strip_array_types (TREE_TYPE (field));
 	  if (type_has_constexpr_default_constructor (ftype))
@@ -7037,6 +7068,12 @@ cxx_eval_bare_aggregate (const constexpr_call *call, tree t,
 	  constructor_elt *inner = base_field_constructor_elt (n, ce->index);
 	  inner->value = elt;
 	}
+      else if (TREE_CODE (ce->index) == NOP_EXPR)
+	{
+	  /* This is an initializer for an empty base; now that we've
+	     checked that it's constant, we can ignore it.  */
+	  gcc_assert (is_empty_class (TREE_TYPE (TREE_TYPE (ce->index))));
+	}
       else
 	CONSTRUCTOR_APPEND_ELT (n, ce->index, elt);
     }
@@ -7417,7 +7454,11 @@ cxx_eval_indirect_ref (const constexpr_call *call, tree t,
     }
 
   if (r == NULL_TREE)
-    return t;
+    {
+      if (!addr)
+	VERIFY_CONSTANT (t);
+      return t;
+    }
   return r;
 }
 
@@ -9269,8 +9310,6 @@ maybe_add_lambda_conv_op (tree type)
   DECL_NOT_REALLY_EXTERN (fn) = 1;
   DECL_DECLARED_INLINE_P (fn) = 1;
   DECL_ARGUMENTS (fn) = build_this_parm (fntype, TYPE_QUAL_CONST);
-  if (nested)
-    DECL_INTERFACE_KNOWN (fn) = 1;
 
   add_method (type, fn, NULL_TREE);
 
@@ -9301,8 +9340,6 @@ maybe_add_lambda_conv_op (tree type)
   DECL_ARGUMENTS (fn) = copy_list (DECL_CHAIN (DECL_ARGUMENTS (callop)));
   for (arg = DECL_ARGUMENTS (fn); arg; arg = DECL_CHAIN (arg))
     DECL_CONTEXT (arg) = fn;
-  if (nested)
-    DECL_INTERFACE_KNOWN (fn) = 1;
 
   add_method (type, fn, NULL_TREE);
 

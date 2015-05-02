@@ -363,10 +363,12 @@ resolve_formal_arglist (gfc_symbol *proc)
 	    }
 	  else if (!sym->attr.pointer)
 	    {
-	      if (proc->attr.function && sym->attr.intent != INTENT_IN)
+	      if (proc->attr.function && sym->attr.intent != INTENT_IN
+		  && !sym->value)
 		proc->attr.implicit_pure = 0;
 
-	      if (proc->attr.subroutine && sym->attr.intent == INTENT_UNKNOWN)
+	      if (proc->attr.subroutine && sym->attr.intent == INTENT_UNKNOWN
+		  && !sym->value)
 		proc->attr.implicit_pure = 0;
 	    }
 	}
@@ -10027,7 +10029,8 @@ build_default_init_expr (gfc_symbol *sym)
       || sym->attr.data
       || sym->module
       || sym->attr.cray_pointee
-      || sym->attr.cray_pointer)
+      || sym->attr.cray_pointer
+      || sym->assoc)
     return NULL;
 
   /* Now we'll try to build an initializer expression.  */
@@ -13190,10 +13193,9 @@ gfc_impure_variable (gfc_symbol *sym)
     }
 
   proc = sym->ns->proc_name;
-  if (sym->attr.dummy && gfc_pure (proc)
-	&& ((proc->attr.subroutine && sym->attr.intent == INTENT_IN)
-		||
-	     proc->attr.function))
+  if (sym->attr.dummy
+      && ((proc->attr.subroutine && sym->attr.intent == INTENT_IN)
+	  || proc->attr.function))
     return 1;
 
   /* TODO: Sort out what can be storage associated, if anything, and include

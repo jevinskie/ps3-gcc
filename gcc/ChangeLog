@@ -1,3 +1,1096 @@
+2012-09-20  Release Manager
+
+	* GCC 4.7.2 released.
+
+2012-09-15  Andi Kleen  <ak@linux.intel.com>
+
+	Backport from mainline
+	2012-09-07  Andi Kleen  <ak@linux.intel.com>
+
+  	* gcc/lto-streamer.h (res_pair): Add.
+    	(lto_file_decl_data): Replace resolutions with respairs.
+    	Add max_index.
+    	* gcc/lto/lto.c (lto_resolution_read): Remove max_index.  Add rp.
+    	Initialize respairs.
+    	(lto_file_finalize): Set up resolutions vector lazily from respairs.
+
+2012-09-14  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline.
+	2012-09-14  Walter Lee  <walt@tilera.com>
+
+	* doc/invoke.texi (Option Summary): fix typesetting for -mcpu
+	option for TILEPro and TILE-Gx.
+
+2012-09-13  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.h (x86_prefetchw): New global variable.
+	(TARGET_PREFETCHW): New macro.
+	* config/i386/i386.c (PTA_PREFETCHW): Ditto.
+	(processor_alias_table): Add PTA_PREFETCHW to
+	bdver1, bdver2 and btver1.
+	(ix86_option_override_internal): Set x86_prefetchw for
+	PTA_PREFETCHW targets.
+	* config/i386/i386.md (prefetch): Expand to prefetchw
+	for TARGET_PREFETCHW.
+	(*prefetch_3dnow_<mode>): Also enable for TARGET_PREFETCHW.
+
+	Backport from mainline
+	2012-08-13  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.md (prefetch): Do not assert mode of operand 0.
+	(*prefetch_sse_<mode>): Do not set mode of address_operand predicate.
+	Rename to ...
+	(*prefetch_sse): ... this.
+	(*prefetch_3dnow_<mode>): Do not set mode of address_operand predicate.
+	Rename to ...
+	(*prefetch_3dnow): ... this.
+
+2012-09-13  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/54559
+	* c-typeck.c (c_finish_return): Do convert to BOOLEAN_TYPE or
+	COMPLEX_TYPE with in_late_binary_op set temporarily to true.
+
+2012-09-12  Teresa Johnson  <tejohnson@google.com>
+
+	Backport from mainline.
+	2012-09-12  Teresa Johnson  <tejohnson@google.com>
+
+	PR gcov-profile/54487
+	* configure.ac (HOST_HAS_F_SETLKW): Set based on compile
+	test using F_SETLKW with fcntl.
+	* configure, config.in: Regenerate.
+
+2012-09-12  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-09-12  Ganesh Gopalasubramanian  <Ganesh.Gopalasubramanian@amd.com>
+
+	* config/i386/i386.md : Comments on fma4 instruction selection
+	reflect requirement on register pressure based cost model.
+
+	* config/i386/driver-i386.c (host_detect_local_cpu): fma4
+	flag is set-reset as informed by the cpuid flag.
+
+	* config/i386/i386.c (processor_alias_table): fma4
+	flag is enabled for bdver2.
+
+2012-09-12  Christian Bruel  <christian.bruel@st.com>
+
+       * config/sh/newlib.h (NO_IMPLICIT_EXTERN_C): Define.
+
+2012-09-12  Jakub Jelinek  <jakub@redhat.com>
+
+	* config.gcc: Obsolete picochip-*.
+
+2012-09-11  Richard Guenther  <rguenther@suse.de>
+
+	PR debug/54534
+	* cgraph.h (varpool_can_remove_if_no_refs): Restore dependence
+	on flag_toplevel_reorder.
+
+2012-09-10  Richard Henderson  <rth@redhat.com>
+
+	* config/alpha/predicates.md (small_symbolic_operand): Disallow
+	large offsets.
+
+2012-09-10  Georg-Johann Lay  <avr@gjlay.de>
+
+	Backport from 2012-09-10 mainline r191132.
+
+	PR target/54536
+	* config/avr/avr-mcus.def (at90usb1287): Set LIBRARY_NAME to "usb1287".
+
+2012-09-10  Markus Trippelsdorf  <markus@trippelsdorf.de>
+
+	PR middle-end/54515
+	* tree-sra.c (disqualify_base_of_expr): Check for possible
+	NULL_TREE returned by get_base_address()
+
+2012-09-07  Richard Guenther  <rguenther@suse.de>
+
+	Backport from mainline
+	2012-06-26  Jan Hubicka  <jh@suse.cz>
+
+	PR lto/53572
+	* cgraph.h (varpool_can_remove_if_no_refs): Fix handling of
+	used symbols.
+
+2012-09-07  Richard Guenther  <rguenther@suse.de>
+
+	Backport from mainline
+	2012-07-13  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/53922
+	* tree-vrp.c (value_inside_range): Change prototype to take
+	min/max instead of value-range.
+	(range_includes_zero_p): Likewise.  Return the result from
+	value_inside_range.
+	(extract_range_from_binary_expr_1): Adjust to handle dont-know
+	return value from range_includes_zero_p.
+	(extract_range_from_unary_expr_1): Likewise.
+	(compare_range_with_value): Likewise.
+	(vrp_meet_1): Likewise.
+
+2012-09-07  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/53667
+	* tree-ssa-structalias.c (handle_rhs_call): Properly clobber
+	EAF_NOESCAPED arguments.  Transitively close non-EAF_DIRECT
+	arguments separately.
+
+2012-09-07  Jakub Jelinek  <jakub@redhat.com>
+
+	Backported from mainline
+	2012-09-06  Jakub Jelinek  <jakub@redhat.com>
+
+	PR rtl-optimization/54455
+	* sel-sched-ir.c (maybe_tidy_empty_bb): Give up if previous fallthru
+	bb ends up with asm goto referencing bb's label.
+
+2012-09-07  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
+
+	Backport from mainline.
+	2012-08-29  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
+		    Richard Earnshaw  <richard.earnshaw@arm.com>
+
+	PR target/54252
+	* config/arm/arm.c (neon_dereference_pointer): Adjust nelems by
+	element size. Use elem_type from the formal parameter. New parameter
+	fcode.
+	(neon_expand_args): Adjust call to neon_dereference_pointer.
+
+2012-09-06  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/sse.md (<sse4_1_avx2>_pblendvb): Use
+	reg_not_xmm0_operand_maybe_avx as operand 0 constraint.
+
+2012-09-06  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-08-11  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.md (isa): Add fma and fma4.
+	(enabled): Handle fma and fma4.
+	* config/i386/sse.md (*fma_fmadd_<mode>): Merge *fma4_fmadd_<mode>.
+	(*fma_fmsub_<mode>): Merge *fma4_fmsub_<mode>.
+	(*fma_fnmadd_<mode>): Merge *fma4_fnmadd_<mode>.
+	(*fma_fnmsub_<mode>): Merge *fma4_fnmsub_<mode>.
+	(*fma_fmaddsub_<mode>): Merge *fma4_fmaddsub_<mode>.
+	(*fma_fmsubadd_<mode>): Merge *fma4_fmsubadd_<mode>.
+
+	2012-08-10  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/sse.md (*fma_fmadd_<mode>, *fma_fmsub_<mode>,
+	*fma_fnmadd_<mode>, *fma_fnmsub_<mode>, *fma_fmaddsub_<mode>,
+	*fma_fmsubadd_<mode>): Move FMA3 insn patterns before FMA4 patterns.
+
+2012-09-06  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/54498
+	* tree-ssa-alias.h (get_continuation_for_phi): Add flag to
+	abort when reaching an already visited region.
+	* tree-ssa-alias.c (maybe_skip_until): Likewise.  And do it.
+	(get_continuation_for_phi_1): Likewise.
+	(walk_non_aliased_vuses): When we translated the reference,
+	abort when we re-visit a region.
+	* tree-ssa-pre.c (translate_vuse_through_block): Adjust.
+
+2012-09-06  Andrew Pinski  <apinski@cavium.com>
+
+	PR tree-opt/54494
+	* tree-inline.c (remap_gimple_op_r): Copy TREE_SIDE_EFFECTS also.
+
+2012-09-05  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/54486
+	* builtins.c (fold_builtin_strspn, fold_builtin_strcspn): Use
+	build_int_cst with size_type_node instead of size_int.
+
+2012-09-05  Georg-Johann Lay  <avr@gjlay.de>
+
+	Backport from 2012-09-05 mainline r190697.
+
+	PR target/54461
+	* config.gcc (tm_file,target=avr-*-*): Add avr/avrlibc.h if
+	configured --with-avrlibc.
+	(tm_defines,target=avr-*-*): Add WITH_AVRLIBC if configured
+	--with-avrlibc.
+	* config/avr/avrlibc.h: New file.
+	* config/avr/avr-c.c: Build-in define __WITH_AVRLIBC__ if
+	configured --with-avrlibc.
+	* doc/invoke.texi (AVR Built-in Macros): Document __WITH_AVRLIBC__
+
+2012-09-05  Bin Cheng  <bin.cheng@arm.com>
+
+	Backport from 2012-09-04 mainline r190919
+
+	PR target/45070
+	* config/arm/arm.c (thumb1_extra_regs_pushed): Handle return value
+	of size less than 4 bytes by using macro ARM_NUM_INTS.
+	(thumb1_unexpanded_epilogue): Use macro ARM_NUM_INTS.
+
+2012-09-04  Richard Henderson  <rth@redhat.com>
+
+	* alias.c (read_dependence): Return true for ALIAS_SET_MEMORY_BARRIER.
+
+2012-09-04  Georg-Johann Lay  <avr@gjlay.de>
+
+	Backport from 2012-09-04 mainline r190920
+
+	PR target/54476
+	* config/avr/avr.c (avr_expand_delay_cycles): Mask operand with SImode.
+
+2012-09-04  Senthil Kumar Selvaraj  <senthil_kumar.selvaraj@atmel.com>
+
+	Backport from 2012-09-04 mainline r190914
+
+	PR target/54220
+	* config/avr/avr.c (TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS): New
+	define to...
+	(avr_allocate_stack_slots_for_args): ...this new static function.
+
+2012-09-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backported from mainline
+	2012-08-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR driver/54335
+	* doc/invoke.texi: Add -da and remove -dm.
+
+2012-09-03  Jakub Jelinek  <jakub@redhat.com>
+
+	Backported from mainline
+	2012-09-01  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/54436
+	* config/i386/i386.md (*mov<mode>_insv_1_rex64, *movsi_insv_1): If
+	operands[1] is CONST_INT_P, convert it to QImode before printing.
+
+	2012-08-31  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/54428
+	* c-convert.c (convert): Don't call fold_convert_loc if
+	TYPE_MAIN_VARIANT of a COMPLEX_TYPE is the same, unless e
+	is a COMPLEX_EXPR.  Remove TYPE_MAIN_VARIANT check from
+	COMPLEX_TYPE -> COMPLEX_TYPE conversion.
+
+	2012-08-24  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/54363
+	* gimplify.c (optimize_compound_literals_in_ctor): Only recurse
+	if init is a CONSTRUCTOR.
+
+2012-09-02  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR rtl-optimization/54369
+	* config/mips/mips.c (mips_reorg): Invoke cleanup_barriers before
+	calling dbr_schedule.
+	* config/sparc/sparc.c (sparc_reorg): Likewise.
+
+2012-08-31  Kirill Yukhin  <kirill.yukhin@intel.com>
+
+	Backport from mainline
+	2012-08-23  Yuri Rumyantsev  <ysrumyan@gmail.com>
+
+	* config/i386/i386.c (ia32_multipass_dfa_lookahead) : Add
+	case for Atom processor.
+
+2012-08-28  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-08-27  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/46254
+	* config/i386/predicates.md (cmpxchg8b_pic_memory_operand): Return
+	true for TARGET_64BIT or !flag_pic.
+	* config/i386/sync.md (*atomic_compare_and_swap_doubledi_pic): Remove.
+	(atomic_compare_and_swap_double<mode>): Change operand 2 predicate
+	to cmpxchg8b_pic_memory_operand.  Use DWIH mode iterator.
+	Add insn constraint.  Conditionally emit xchg asm insns.
+	(atomic_compare_and_swap<mode>): Update calls.  Check only
+	cmpxchg8b_pic_memory_operand in memory address fixup.
+	(DCASMODE): Remove.
+	(CASHMODE): Rename from DCASHMODE.
+	(doublemodesuffix): Update modes.
+	(regprefix): New mode attribute.
+
+	(unspecv) <UNSPECV_CMPXCHG_{1,2,3,4}>: Remove.
+	<UNSPECV_CMPXCHG>: New constant.
+	(atomic_compare_and_swap<mode>_1): Rename from
+	atomic_compare_and_swap_single<mode>.  Update calls and
+	unspec_volatile constants.
+	(atomic_compare_and_swap<mode>_doubleword): Rename from
+	atomic_compare_and_swap_double<mode>.  Update calls and
+	unspec_volatile constants.
+
+2012-08-28  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-28  Walter Lee  <walt@tilera.com>
+
+	* confg/tilegx/tilegx.md: Fix code style.
+	(*zero_extendsidi_truncdisi): Fix typo.
+	* config/tilegx/tilegx.c: Fix code style.
+	(tilegx_function_profiler): Fix typo.
+
+2012-08-27  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-27  Walter Lee  <walt@tilera.com>
+
+	* doc/md.texi (TILE-Gx): Fix typo.
+
+2012-08-27  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-27  Walter Lee  <walt@tilera.com>
+
+	* config/tilegx/tilegx.c (tilegx_function_profiler): Fix typo.
+	* config/tilepro/tilepro.c (tilepro_function_profiler): Ditto.
+
+2012-08-27  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-27  Walter Lee  <walt@tilera.com>
+
+	* config/tilegx/tilegx.md (*bfins): Rename to insn_bfins.
+	(insn_bfins): Delete.
+
+2012-08-27  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-27  Walter Lee  <walt@tilera.com>
+
+	* config/tilegx/sync.md (atomic_compare_and_swap_bare<mode>,
+	atomic_exchange_bare<mode>,
+	atomic_fetch_<fetchop_name>_bare<mode>): Set type to X1_remote.
+	* config/tilegx/tilegx-generic.md (X1_remote): New insn_reservation.
+	* config/tilegx/tilegx.md (type): Add X1_remove.
+	(insn_cmpexch<four_if_si>, insn_exch<four_if_si>,
+	insn_fetchadd<four_if_si>, insn_fetchaddgez<four_if_si>,
+	insn_fetchand<four_if_si>, insn_fetchor<four_if_si>): Set type to
+	X1_remote.
+
+2012-08-25  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR rtl-optimization/54088
+	* jump.c (delete_related_insns): Robustify latest change.
+
+2012-08-21  Richard Guenther  <rguenther@suse.de>
+
+	Backport from mainline
+	2012-08-16  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/54146
+	* tree-ssa-loop-niter.c (find_loop_niter_by_eval): Free the
+	exit vector.
+	* ipa-pure-const.c (analyze_function): Use FOR_EACH_LOOP_BREAK.
+	* cfgloop.h (FOR_EACH_LOOP_BREAK): Fix.
+	* tree-ssa-structalias.c (handle_lhs_call): Properly free rhsc.
+	* tree-ssa-loop-im.c (analyze_memory_references): Adjust.
+	(tree_ssa_lim_finalize): Free all mem_refs.
+	* tree-ssa-sccvn.c (extract_and_process_scc_for_name): Free
+	scc when bailing out.
+	* modulo-sched.c (sms_schedule): Use FOR_EACH_LOOP_BREAK.
+	* ira-build.c (loop_with_complex_edge_p): Free loop exit vector.
+	* graphite-sese-to-poly.c (scop_ivs_can_be_represented): Use
+	FOR_EACH_LOOP_BREAK.
+
+	2012-08-17  Richard Guenther  <rguenther@suse.de>
+
+	* tree-sra.c (modify_function): Free redirect_callers vector.
+	* ipa-split.c (split_function): Free args_to_pass vector.
+	* tree-vect-stmts.c (vectorizable_operation): Do not pre-allocate
+	vec_oprnds.
+	(new_stmt_vec_info): Do not pre-allocate STMT_VINFO_SAME_ALIGN_REFS.
+	* tree-vect-slp.c (vect_free_slp_instance): Free the instance.
+	(vect_analyze_slp_instance): Free everything.
+	(destroy_bb_vec_info): Free the SLP instances.
+
+	2012-08-17  Richard Guenther  <rguenther@suse.de>
+
+	* params.def (integer-share-limit): Decrease from 256 to 251,
+	add rationale.
+
+	2012-08-21  Richard Guenther  <rguenther@suse.de>
+
+	* tree-ssa-loop-im.c (tree_ssa_lim_finalize): Properly free
+	the affine expansion cache.
+
+2012-08-20  Patrick Marlier  <patrick.marlier@gmail.com>
+
+	Backported from trunk
+	2012-08-20  Patrick Marlier  <patrick.marlier@gmail.com>
+
+	PR middle-end/53992
+	* omp-low.c (lower_omp_1): Handle GIMPLE_TRANSACTION.
+
+2012-08-20  Ramana Radhakrishnan  <ramana.radhakrishnan@linaro.org>
+
+	Backport from mainline.
+	2012-08-15  Ramana Radhakrishnan  <ramana.radhakrishnan@linaro.org>
+
+	PR target/54212
+	* config/arm/neon.md (vec_set<mode>_internal VD,VQ): Do not
+	mark as predicable. Adjust asm template.
+	(vec_setv2di_internal): Likewise.
+	(vec_extract<mode> VD, VQ): Likewise.
+	(vec_extractv2di): Likewise.
+	(neon_vget_lane<mode>_sext_internal VD, VQ): Likewise.
+	(neon_vset_lane<mode>_sext_internal VD, VQ): Likewise.
+	(neon_vdup_n<mode> VX, V32): Likewise.
+	(neon_vdup_nv2di): Likewise.
+
+2012-08-17  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-17  Walter Lee  <walt@tilera.com>
+
+	* config/tilegx/feedback.h (FEEDBACK_ENTER_EXPLICIT): Define.
+	(FEEDBACK_ENTER): Define.
+	(FEEDBACK_REENTER): Define.
+	(FEEDBACK_ENTRY): Define.
+	* config/tilepro/feedback.h: (FEEDBACK_ENTER_EXPLICIT): Define.
+	(FEEDBACK_ENTER): Define.
+	(FEEDBACK_REENTER): Define.
+	(FEEDBACK_ENTRY): Define.
+
+2012-08-16  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline
+	2012-08-16  Walter Lee  <walt@tilera.com>
+
+	* config.gcc (tilegx-*-linux*): Add feedback.h.
+	(tilepro-*-linux*): Likewise.
+	* config/tilegx/feedback.h: New file.
+	* config/tilepro/feedback.h: New file.
+
+2012-08-08  Pavel Chupin  <pavel.v.chupin@intel.com>
+
+	Backport from mainline r189840 and r187586:
+	2012-07-25 Sergey Melnikov <sergey.melnikov@intel.com>
+
+	* config/i386/i386.md (stack_protect_set): Disable the pattern
+	for Android since Android libc (bionic) does not provide random
+	value for stack protection guard at gs:0x14. Guard value
+	will be provided from external symbol (default implementation).
+	(stack_protect_set_<mode>): Likewise.
+	(stack_protect_test): Likewise.
+	(stack_protect_test_<mode>): Likewise.
+	* gcc/defaults.h: Define macro TARGET_HAS_BIONIC to 0 - target does
+	not have Bionic by default
+	* config/linux.h: Redefine macro TARGET_HAS_BIONIC to (OPTION_BIONIC)
+	Macro OPTION_BIONIC is defined in this file and provides Bionic
+	accessibility status
+
+	2012-05-16  Igor Zamyatin  <igor.zamyatin@intel.com>
+
+	* configure.ac: Stack protector enabling for Android targets.
+	* configure: Regenerate.
+
+2012-08-13  Jakub Jelinek  <jakub@redhat.com>
+
+	Backported from trunk
+	2012-07-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR rtl-optimization/53942
+	* function.c (assign_parm_setup_reg): Avoid zero/sign extension
+	directly from likely spilled non-fixed hard registers, move them
+	to pseudo first.
+
+2012-08-11  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/sse.md (xop_phaddbq):  Fix vec_select selectors.
+	(xop_phaddubq): Ditto.
+
+2012-08-10  Ulrich Weigand  <ulrich.weigand@linaro.org>
+
+	Backport from mainline
+	2012-07-30  Ulrich Weigand  <ulrich.weigand@linaro.org>
+		    Richard Earnshaw  <rearnsha@arm.com>
+
+	* target.def (vector_alignment): New target hook.
+	* doc/tm.texi.in (TARGET_VECTOR_ALIGNMENT): Document new hook.
+	* doc/tm.texi: Regenerate.
+	* targhooks.c (default_vector_alignment): New function.
+	* targhooks.h (default_vector_alignment): Add prototype.
+	* stor-layout.c (layout_type): Use targetm.vector_alignment.
+	* config/arm/arm.c (arm_vector_alignment): New function.
+	(TARGET_VECTOR_ALIGNMENT): Define.
+
+	* tree-vect-data-refs.c (vect_update_misalignment_for_peel): Use
+	vector type alignment instead of size.
+	* tree-vect-loop-manip.c (vect_do_peeling_for_loop_bound): Use
+	element type size directly instead of computing it from alignment.
+	Fix variable naming and comment.
+
+2012-08-09  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-08-09  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/alpha/alpha.c (alpha_pad_noreturn): Rename to ...
+	(alpha_pad_function_end): ... this.  Also insert NOP between
+	sibling call and GP load.
+	(alpha_reorg): Update call to alpha_pad_function_end.  Expand comment.
+
+2012-08-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from mainline
+	2012-08-08  Richard Sandiford  <rdsandiford@googlemail.com>
+		    H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR rtl-optimization/54157
+	* combine.c (gen_lowpart_for_combine): Don't return identity
+	for CONST or symbolic reference.
+
+2012-08-06  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-07-23  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386-protos.h (ix86_lea_outperforms): Remove prototype.
+	* config/i386/i386.c (ix86_lea_outperforms): Make static.  Make
+	split_cost argument signed.
+	(ix86_use_lea_for_mov): Use INVALID_REGNUM instead of -1.
+	(ix86_avoid_lea_for_addr): Ditto.
+
+	2012-07-27  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.c (ix86_avoid_lea_for_addr): Return false if
+	the address has less than two components.
+
+2012-08-02  Steve Ellcey  <sellcey@mips.com>
+
+	Backport from mainline
+	2012-07-19  Steve Ellcey  <sellcey@mips.com>
+
+	* config/mips/mips.c (mips_set_mips16_mode): Clear SYNCI_MASK in
+	MIPS16 mode.
+
+2012-08-02  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-07-24  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/53961
+	* config/i386/i386.c (ix86_legitimate_address_p): Move check for
+	negative constant address for TARGET_X32 ...
+	(ix86_decompose_address): ... here.  Reject constant addresses
+	that don't satisfy x86_64_immediate_operand predicate.
+
+	2012-07-23  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/53961
+	* config/i386/i386.md (*lea): Add asserts to detect invalid addresses.
+	* config/i386/i386.c (ix86_print_operand_address): Ditto.
+	(ix86_decompose_address): Allow (zero_extend:DI (subreg:SI (...)))
+	addresses.  Prevent zero extensions of CONST_INT operands.
+
+	2012-07-22  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/53961
+	* config/i386/i386.md (*lea): New insn pattern.
+	(*lea_1): Remove.
+	(*lea<mode>_2): Ditto.
+	(*lea_{3,4,5,6}_zext): Ditto.
+	* config/i386/predicates.md (lea_address_operand): Do not reject
+	zero-extended address operands.
+	* config/i386/constraints.md (j): Remove address constraint.
+	* config/i386/i386.c (ix86_decompose_address): Allow SImode subreg
+	of an address.
+	(ix86_print_operand_address): Handle SImode subreg of an address.
+	(ix86_avoid_lea_for_addr): Reject zero-extended addresses for now.
+
+2012-08-01  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-03-09  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/52530
+	* config/i386/i386.c (ix86_print_operand): Handle 'E' operand modifier.
+	(ix86_print_operand_address): Handle UNSPEC_LEA_ADDR. Do not fallback
+	to set code to 'q'.
+	* config/i386/i386.md (UNSPEC_LEA_ADDR): New unspec.
+	(*movdi_internal_rex64): Use %E operand modifier for lea.
+	(*movsi_internal): Ditto.
+	(*lea_1): Ditto.
+	(*lea<mode>_2): Ditto.
+	(*lea_{3,4,5,6}_zext): Ditto.
+	(*tls_global_dynamic_32_gnu): Ditto.
+	(*tls_global_dynamic_64): Ditto.
+	(*tls_dynamic_gnu2_lea_32): Ditto.
+	(*tls_dynamic_gnu2_lea_64): Ditto.
+	(pro_epilogue_adjust_stack_<mode>_add): Ditto.
+
+2012-08-01  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-08-01  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.c (ix86_address_subreg_operand): Reject
+	stack pointer.
+	(ix86_print_operand_address): Assert that parts.base and parts.index
+	are non-NULL after call to simplify_subreg.
+
+2012-07-22  Oleg Endo  <olegendo@gcc.gnu.org>
+
+	PR target/33135
+	* config/sh/sh.opt (mieee): Use Var instead of Mask.  Correct
+	description.
+	* config/sh/sh.c (sh_option_override): Do not change
+	flag_finite_math_only.  Set TARGET_IEEE to complement of
+	flag_finite_math_only.
+	* doc/invoke.texi (SH options): Add mno-ieee.  Correct
+	description of mieee and mno-ieee behavior.
+
+2012-07-20  Kirill Yukhin  <kirill.yukhin@intel.com>
+
+	PR target/53877
+	* config/i386/lzcntintrin.h (_lzcnt_u32): New.
+	(_lzcnt_u64): Ditto.
+
+2012-07-20  Andrey Belevantsev  <abel@ispras.ru>
+
+	Backport from mainline
+	2012-03-06  Andrey Belevantsev  <abel@ispras.ru>
+
+	PR rtl-optimization/52250
+	* sel-sched-ir.c (maybe_tidy_empty_bb): Try harder to find a bb
+	to put note list into.  Unconditionally call move_bb_info.
+	(move_bb_info): Do not assert the blocks being in the same region,
+	just drop the note list if they are not.
+
+2012-07-19  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* config/sparc/sparc.md (adddi3_insn_sp32): Add earlyclobber.
+
+2012-07-19  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* tree-ssa-forwprop.c (combine_conversions): Punt if the RHS of the
+	defining statement is a SSA name that occurs in abnormal PHIs.
+
+2012-07-19  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gimple-fold.c (canonicalize_constructor_val): Strip only useless type
+	conversions.
+
+2012-07-19  Richard Guenther  <rguenther@suse.de>
+	    Eric Botcazou  <ebotcazou@adacore.com>
+
+	* tree-ssa-ccp.c (valid_lattice_transition): Clarify comment
+	about transition from invariant to known bits.
+	(likely_value): Addresses with UNDEFINED components are UNDEFINED.
+
+2012-07-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/54017
+	* tree-cfgcleanup.c (cleanup_omp_return): Remove.
+	(cleanup_tree_cfg_bb): Don't call it.
+	* omp-low.c (expand_omp_sections): Fix up the !exit_reachable case
+	handling.
+
+2012-07-19  Christian Bruel  <christian.bruel@st.com>
+
+	PR target/54029
+	* config/sh/sh.c (gen_far_branch): Set JUMP_LABEL for return jumps.
+
+2012-07-18  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* config.gcc (v850-*-rtems*): New target.
+	* config/v850/rtems.h: New.
+	* config/v850/t-rtems: New.
+
+2012-07-18  Nick Clifton  <nickc@redhat.com>
+
+	* doc/invoke.texi (ARM Options): Document -munaligned-access.
+
+2012-07-15  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/53961
+
+	Backport from mainline
+	2012-04-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/53110
+	* config/i386/i386.md (and<mode>3): For andq $0xffffffff, reg
+	instead expand it as zero extension.
+
+2012-07-14  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.md (QImode and HImode cmove splitters): Merge
+	QImode and HImode splitters.  Use ix86_comparison_operator.
+	Explicitly match FLAGS_REG.
+	(DFmode cmove splitter): Explicitly match FLAGS_REG.
+
+2012-07-13  Richard Sandiford  <rdsandiford@googlemail.com>
+	    Steven Bosscher  <steven@gcc.gnu.org>
+	    Bernd Schmidt  <bernds@codesourcery.com>
+
+	PR rtl-optimization/53908
+	* df-problems.c (can_move_insns_across): When doing
+	memory-reference book-keeping, handle call insns.
+
+2012-07-10  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-07-03  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/53811
+	* config/i386/i386.c (x86_output_mi_thunk): Check if fnaddr satisfies
+	sibcall_insn_operand.  Move it to a temporary register if not.
+
+	2012-07-06  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/53853
+	* config/i386/i386.c (x86_output_mi_thunk): For CM_LARGE_PIC model,
+	emit PIC sequence for fnaddr symbol reference in advance.
+
+2012-07-09  Jason Merrill  <jason@redhat.com>
+
+	PR c++/53882
+	* tree.c (type_contains_placeholder_1): Handle NULLPTR_TYPE.
+	(type_hash_eq): Likewise.
+
+	PR c++/53826
+	* tree.c (build_zero_cst): Handle NULLPTR_TYPE.
+
+2012-07-07  Ulrich Weigand  <ulrich.weigand@linaro.org>
+
+	* combine.c (force_to_mode) [LSHIFTRT]: Avoid undefined behaviour
+	due to negative shift amount.
+
+2012-07-06  Kai Tietz  <ktietz@redhat.com>
+
+	Backport from mainline.
+	PR bootstrap/52947
+	* config/i386/mingw32.h (NATIVE_SYSTEM_HEADER_DIR): Define it always
+	as "/mingw/include".
+
+2012-07-06  Nick Clifton  <nickc@redhat.com>
+
+	* config/mn10300/mn10300.c (mn10300_encode_section_info): Call
+	default_encode_section_info.
+
+2012-07-06  Richard Guenther  <rguenther@suse.de>
+
+	Backport from mainline
+	2012-03-30  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/52786
+	* double-int.c (rshift_double): Remove not needed cast.
+
+	2012-03-28  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/50708
+	* double-int.h (rshift_double): Remove.
+	* double-int.c (lshift_double): Use absu_hwi to make count
+	positive.
+	(rshift_double): Make static, take unsigned count argument,
+	remove handling of negative count argument.
+	(double_int_rshift): Dispatch to lshift_double.
+
+2012-07-06  Richard Guenther  <rguenther@suse.de>
+
+	Backport from mainline
+	2012-06-18  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/53693
+	* tree-vect-patterns.c (vect_operation_fits_smaller_type):
+	Reject operands with more than one use.
+
+2012-07-06  Richard Guenther  <rguenther@suse.de>
+
+	Backport from mainline
+	2012-04-11  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/52621
+	* tree-chrec.c (evolution_function_is_invariant_rec_p): Properly
+	consider loop nesting.
+	(evolution_function_is_univariate_p): Properly check the remainder
+	for chrecs.
+
+2012-07-05  Pat Haugen <pthaugen@us.ibm.com>
+
+	Backport from mainline
+	2012-05-24  Pat Haugen <pthaugen@us.ibm.com>
+
+	* config/rs6000/rs6000.c (rs6000_option_override_internal): Change
+	rs6000_sched_costly_dep default to true_store_to_load_dep_costly.
+	(adjacent_mem_locations): Move some code to and call...
+	(get_memref_parts): ...new function.
+	(mem_locations_overlap): New function.
+	(rs6000_adjust_priority): Adjust calls to is_load_insn/is_store_insn.
+	(is_mem_ref): Rename to...
+	(find_mem_ref): ...this. Return MEM rtx.
+	(get_store_dest): Remove function.
+	(is_load_insn1, is_load_insn, is_store_insn1, is_store_insn): Add
+	new parameter and adjust calls.
+	(rs6000_is_costly_dependence): Update calls for extra arg. Make sure
+	mem refs overlap for true_store_to_load_dep_costly.
+	(rs6000_sched_reorder2): Update calls for extra arg. Adjust args
+	passed to adjacent_mem_locations.
+	(is_costly_group): Walk resolved dependency list.
+	(force_new_group): Emit group ending nop for Power6/Power7.
+	* config/rs6000/rs6000.md (UNSPEC_GRP_END_NOP): New enum value.
+	(group_ending_nop): New define_insn.
+
+2012-07-04  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/53433
+	* gimple-fold.c (get_base_constructor): Do not return an
+	error_mark_node DECL_INITIAL.
+
+2012-07-04  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline
+	2012-07-03  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/i386.c (ix86_option_override_internal): Fix wrong
+	code model string in the error message.
+
+2012-07-04  Tristan Gingold  <gingold@adacore.com>
+
+	Backport from mainline.
+	2012-06-25  Tristan Gingold  <gingold@adacore.com>
+
+	* config/i386/winnt.c (i386_pe_seh_end_prologue): Move code to ...
+	(seh_cfa_adjust_cfa): ... that function.
+	(seh_emit_stackalloc): Do not emit out of range values.
+	* config/i386/i386.md: Delete unused UNSPEC_REG_SAVE,
+	UNSPEC_DEF_CFA constants.
+	* config/i386/i386.h (SEH_MAX_FRAME_SIZE): Define.
+	* config/i386/i386.c (ix86_frame_pointer_required): Required
+	for very large frames on SEH target.
+	(ix86_compute_frame_layout): Save area is before frame pointer
+	on SEH target.  Handle very large frames.
+	(ix86_expand_prologue): Likewise.
+
+2012-07-04  Richard Guenther  <rguenther@suse.de>
+
+	* tree.c (find_decls_types_r): Handle TYPE_CONTEXT the same
+	as in free_lang_data_in_type.
+
+2012-07-02  Martin Jambor  <mjambor@suse.cz>
+
+	Backport from mainline.
+	2012-07-02  Martin Jambor  <mjambor@suse.cz>
+
+	PR middle-end/38474
+	* ipa-prop.c (compute_known_type_jump_func): Put BINFO check before a
+	dynamic type change check.
+
+2012-06-29  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* tree-eh.c (lower_try_finally_switch): Really put the location of the
+	last statement of the finally block onto the switch.
+
+2012-06-29  Ramana Radhakrishnan  <ramana.radhakrishnan@linaro.org>
+
+	* configure: Regenerate.
+
+	Backport from mainline.
+	2012-03-15  Ramana Radhakrishnan  <ramana.radhakrishnan@linaro.org>
+
+	* config.gcc (target_type_format_char): New. Document it. Set it for
+	arm*-*-* .
+	* configure.ac (gnu_unique_option): Use target_type_format_char
+	in test.  Comment rationale.
+
+2012-06-29  Ramana Radhakrishnan  <ramana.radhakrishnan@linaro.org>
+
+	Backport from mainline.
+	2012-05-30  Ramana Radhakrishnan  <ramana.radhakrishnan@linaro.org>
+
+	* config/arm/arm.c (arm_evpc_neon_vrev): Adjust off by one error.
+
+2012-06-28  Georg-Johann Lay  <avr@gjlay.de>
+
+	Backport from 2012-06-28 mainline r189049
+
+	PR 53595
+	* config/avr/avr.c (avr_hard_regno_call_part_clobbered): New.
+	* config/avr/avr-protos.h (avr_hard_regno_call_part_clobbered): New.
+	* config/avr/avr.h (HARD_REGNO_CALL_PART_CLOBBERED): Forward to
+	avr_hard_regno_call_part_clobbered.
+
+2012-06-28  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/53790
+	* expr.c (expand_expr_real_1): Verify if the type is complete
+	before inspecting its size.
+
+2012-06-27  Nick Clifton  <nickc@redhat.com>
+
+	* config/rx/rx.md (comparesi3_extend): Remove = modifier from
+	input operand.
+
+2012-06-26  Alexandre Oliva  <aoliva@redhat.com>
+
+	PR debug/53682
+	* cselib.c (promote_debug_loc): Don't crash on NULL argument.
+
+2012-06-26  Nick Clifton  <nickc@redhat.com>
+
+	* config/rx/rx.md (simple_return): Use the simple_return rtx.
+
+2012-06-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/53759
+	* config/i386/sse.md (sse_loadlps): Use x m x constraints instead
+	of x x x in the vmovlps load alternative.
+
+2012-06-22  Richard Guenther  <rguenther@suse.de>
+
+	* gcov-iov.c: Include bconfig.h and system.h.
+
+2012-06-22  Richard Guenther  <rguenther@suse.de>
+
+	PR gcov-profile/53744
+	* gcov-iov.c (main): Treat "" and "prerelease" the same.
+
+2012-06-22  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* tree-ssa-live.c (remove_unused_scope_block_p): Remove again
+	DECL_IGNORED_P non-reg vars even if they are used.
+
+2012-06-19  Jason Merrill  <jason@redhat.com>
+
+	PR c++/52637
+	* dwarf2out.c (modified_type_die): Use scope_die_for.
+	(gen_type_die_with_usage, dwarf2out_finish): Likewise.
+	(uses_local_type_r, uses_local_type): New.
+	(scope_die_for): Keep a type that uses a local type in local scope.
+	Use get_context_die for namespace and type scope.
+
+2012-06-19  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/53470
+	* tree.c (free_lang_data_in_type): Do not clear TYPE_CONTEXT but
+	replace it with the first non-BLOCK context.
+
+2012-06-18  Vladimir Makarov  <vmakarov@redhat.com>
+
+	PR rtl-optimization/53700
+
+	Backport from mainline
+	2012-03-29  Vladimir Makarov  <vmakarov@redhat.com>
+
+	* ira-color.c (setup_left_conflict_sizes_p): Process all
+	conflicting objects.
+
+2012-06-18  Venkataramanan Kumar <venkataramanan.kumar@amd.com>
+
+	Backport from mainline
+	2012-05-09 Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/52908
+	* config/i386/sse.md (vec_widen_smult_hi_v4si): Expand using
+	xop_pmacsdqh insn pattern instead of xop_mulv2div2di3_high.
+	(vec_widen_smult_lo_v4si): Expand using xop_pmacsdql insn pattern
+	instead of xop_mulv2div2di3_low.
+	(xop_p<macs>dql): Fix vec_select selector.
+	(xop_p<macs>dqh): Ditto.
+	(xop_mulv2div2di3_low): Remove insn_and_split pattern.
+	(xop_mulv2div2di3_high): Ditto.
+
+2012-06-17  Uros Bizjak  <ubizjak@gmail.com>
+
+	Backport from mainline:
+	2012-06-17  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/sse.md (vcvtph2ps): Fix vec_select selector.
+
+2012-06-16  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	Backport from mainline:
+	2012-06-03  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* config/pa/pa.h (MAX_PCREL17F_OFFSET): Define.
+	* config/pa/pa.c (pa_attr_length_millicode_call): Use
+	MAX_PCREL17F_OFFSET instead of fixed offset.
+	(pa_attr_length_call): Likewise.
+	(pa_attr_length_indirect_call): Likewise.
+
+2012-06-15  Walter Lee  <walt@tilera.com>
+
+	Backport from mainline:
+	2012-06-15  Walter Lee  <walt@tilera.com>
+
+	* config/tilegx/sync.md (atomic_fetch_<fetchop_name><mode>): Fix typo.
+
+	2012-06-14  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* config/tilegx/sync.md (atomic_fetch_sub<mode>): Fix typo.
+
+2012-06-15  Aldy Hernandez  <aldyh@redhat.com>
+
+	Backport from mainline:
+
+	2012-05-31  Aldy Hernandez  <aldyh@redhat.com>
+	* tree-ssa-loop-im.c (execute_sm): Do not check flag_tm.
+	* gimple.h (block_in_transaction): Check for flag_tm.
+
+2012-06-14  Aldy Hernandez  <aldyh@redhat.com>
+
+	PR tree-optimization/52558
+
+	Backport from mainline:
+	2012-05-21  Aldy Hernandez  <aldyh@redhat.com>
+	* gimple.h (gimple_set_in_transaction): Remove.
+	(gimple_in_transaction): Look in BB instead.
+	(gimple_statement_base): Remove in_transaction field.
+	* basic-block.h (enum bb_flags): Add BB_IN_TRANSACTION.
+	* trans-mem.c (compute_transaction_bits): Place transaction bit
+	information into basic blocks.
+
+	2012-05-31  Aldy Hernandez  <aldyh@redhat.com>
+
+	PR tree-optimization/52558
+	* cfg.c (alloc_aux_for_edge): Fix comment.
+	(alloc_aux_for_edge): Remove static.
+	* basic-block.h (alloc_aux_for_edge): Protoize.
+	* tree-ssa-loop-im.c (execute_sm_if_changed): New.
+	(execute_sm_if_changed_flag): New.
+	(execute_sm_if_changed_flag_set): New.
+	(execute_sm): Do not generate data races unless requested.
+	(tree_ssa_lim_initialize): Call alloc_aux_for_edges.
+	(tree_ssa_lim_finalize): Call free_aux_for_edges.
+	* gimple.h (block_in_transaction): New.
+	(gimple_in_transaction): Use block_in_transaction.
+
+2012-06-14  Jakub Jelinek  <jakub@redhat.com>
+
+	Backported from mainline
+	2012-06-12  Jakub Jelinek  <jakub@redhat.com>
+
+	PR rtl-optimization/53589
+	* cfgrtl.c (force_nonfallthru_and_redirect): Do asm_goto_edge
+	discovery even when e->dest != target.  If any LABEL_REF points
+	to e->dest label, redirect it to target's label.
+
+	2012-06-07  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/53580
+	* omp-low.c (scan_omp_1_stmt): If check_omp_nesting_restrictions
+	returns false, replace stmt with GIMPLE_NOP.
+	(check_omp_nesting_restrictions): Instead of issuing warnings,
+	issue errors and return false if any errors were reported.
+
+2012-06-14  Richard Guenther  <rguenther@suse.de>
+
+	* BASE-VER: Set to 4.7.2.
+	* DEV-PHASE: Set to prerelease.
+
+2012-06-12  Christian Bruel  <christian.bruel@st.com>
+
+	PR target/53621
+	* config/sh/sh.c (sh_option_override): Don't force
+	 flag_omit_frame_pointer and maccumulate_outgoing_args.
+	* config/sh/sh.opt (maccumulate-outgoing-args): Init as Var.
+
 2012-06-14  Release Manager
 
 	* GCC 4.7.1 released.
