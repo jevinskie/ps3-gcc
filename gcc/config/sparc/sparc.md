@@ -1,5 +1,5 @@
 ;; Machine description for SPARC chip for GCC
-;;  Copyright (C) 1987-2014 Free Software Foundation, Inc.
+;;  Copyright (C) 1987-2015 Free Software Foundation, Inc.
 ;;  Contributed by Michael Tiemann (tiemann@cygnus.com)
 ;;  64-bit SPARC-V9 support by Michael Tiemann, Jim Wilson, and Doug Evans,
 ;;  at Cygnus Support.
@@ -221,6 +221,7 @@
    hypersparc,
    leon,
    leon3,
+   leon3v7,
    sparclite,
    f930,
    f934,
@@ -1891,7 +1892,7 @@
   emit_insn (gen_movsi (gen_lowpart (SImode, operands[0]),
 			operands[1]));
 #else
-  unsigned int low, high;
+  HOST_WIDE_INT low, high;
 
   low = trunc_int_for_mode (INTVAL (operands[1]), SImode);
   high = trunc_int_for_mode (INTVAL (operands[1]) >> 32, SImode);
@@ -2370,14 +2371,14 @@
 #if HOST_BITS_PER_WIDE_INT == 32
       gcc_unreachable ();
 #else
-      enum machine_mode mode = GET_MODE (operands[1]);
+      machine_mode mode = GET_MODE (operands[1]);
       rtx tem = simplify_subreg (DImode, operands[1], mode, 0);
       emit_insn (gen_movdi (operands[0], tem));
 #endif
     }
   else
     {
-      enum machine_mode mode = GET_MODE (operands[1]);
+      machine_mode mode = GET_MODE (operands[1]);
       rtx hi = simplify_subreg (SImode, operands[1], mode, 0);
       rtx lo = simplify_subreg (SImode, operands[1], mode, 4);
 
@@ -4829,7 +4830,7 @@
   [(set (match_dup 3) (match_dup 4))
    (set (match_dup 0) (ior:SI (not:SI (match_dup 3)) (match_dup 1)))]
 {
-  operands[4] = GEN_INT (~INTVAL (operands[2]));
+  operands[4] = gen_int_mode (~INTVAL (operands[2]), SImode);
 })
 
 (define_insn_and_split "*or_not_di_sp32"
@@ -4906,7 +4907,7 @@
   [(set (match_dup 3) (match_dup 4))
    (set (match_dup 0) (not:SI (xor:SI (match_dup 3) (match_dup 1))))]
 {
-  operands[4] = GEN_INT (~INTVAL (operands[2]));
+  operands[4] = gen_int_mode (~INTVAL (operands[2]), SImode);
 })
 
 (define_split
@@ -4918,7 +4919,7 @@
   [(set (match_dup 3) (match_dup 4))
    (set (match_dup 0) (xor:SI (match_dup 3) (match_dup 1)))]
 {
-  operands[4] = GEN_INT (~INTVAL (operands[2]));
+  operands[4] = gen_int_mode (~INTVAL (operands[2]), SImode);
 })
 
 ;; Split DImode logical operations requiring two instructions.
