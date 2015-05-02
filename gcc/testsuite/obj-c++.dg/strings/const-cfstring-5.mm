@@ -6,16 +6,16 @@
 /* { dg-skip-if "NeXT only" { *-*-* } { "-fgnu-runtime" } { "" } } */
 /* { dg-options "-mconstant-cfstrings" } */
 
-#include <Foundation/NSObject.h>
+#include <objc/Object.h>
 
-@interface Foo: NSObject {
+@interface Foo: Object {
   char *cString;
   unsigned int len;
 }
 + (Foo *)description;
 @end
 
-@interface Bar: NSObject
+@interface Bar: Object
 + (Foo *) getString: (int) which;
 @end
 

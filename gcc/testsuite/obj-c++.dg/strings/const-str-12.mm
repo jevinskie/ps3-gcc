@@ -5,23 +5,17 @@
 /* { dg-options "-fconstant-string-class=Foo" } */
 /* { dg-options "-mno-constant-cfstrings -fconstant-string-class=Foo" { target *-*-darwin* } } */
 
-#ifdef __NEXT_RUNTIME__
-#include <Foundation/NSObject.h>
-#define OBJECT NSObject
-#else
 #include <objc/Object.h>
-#define OBJECT Object
-#endif
 #include "../../objc-obj-c++-shared/objc-test-suite-types.h"
 
-@interface Foo: OBJECT {
+@interface Foo: Object {
   char *cString;
   unsigned int len;
 }
 + (id)description;
 @end
 
-@interface Bar: OBJECT
+@interface Bar: Object
 + (Foo *) getString: (int) which;
 @end
 

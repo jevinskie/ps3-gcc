@@ -7,7 +7,7 @@
 --                                 S p e c                                  --
 --                          (GNU-Linux/s390 Version)                        --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- This specification is derived from the Ada Reference Manual for use with --
 -- GNAT. The copyright notice above, and the license provisions that follow --
@@ -35,10 +35,9 @@
 ------------------------------------------------------------------------------
 
 package System is
-   pragma Pure;
-   --  Note that we take advantage of the implementation permission to make
-   --  this unit Pure instead of Preelaborable; see RM 13.7.1(15). In Ada
-   --  2005, this is Pure in any case (AI-362).
+pragma Pure (System);
+--  Note that we take advantage of the implementation permission to
+--  make this unit Pure instead of Preelaborable, see RM 13.7(36)
 
    type Name is (SYSTEM_NAME_GNAT);
    System_Name : constant Name := SYSTEM_NAME_GNAT;
@@ -62,7 +61,6 @@ package System is
    --  Storage-related Declarations
 
    type Address is private;
-   pragma Preelaborable_Initialization (Address);
    Null_Address : constant Address;
 
    Storage_Unit : constant := 8;

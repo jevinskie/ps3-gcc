@@ -7,19 +7,20 @@
 /* { dg-skip-if "NeXT-only" { *-*-* } { "-fgnu-runtime" } { "" } } */
 /* { dg-options "-freplace-objc-classes" } */
 
-#include <Foundation/NSObject.h>
+#include <objc/objc.h>
+#include <objc/Object.h>
 
 extern void abort(void);
 #define CHECK_IF(expr) if(!(expr)) abort();
 
-@interface NSObject (TEST_SUITE_C1)
+@interface Object (TEST_SUITE_C1)
 - init;
 @end
-@implementation NSObject (TEST_SUITE_C1)
+@implementation Object (TEST_SUITE_C1)
 - init {return self;}
 @end
 
-@interface Base: NSObject {
+@interface Base: Object {
 @public
   int a;
   float b;

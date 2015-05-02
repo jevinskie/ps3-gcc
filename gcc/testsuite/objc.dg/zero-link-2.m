@@ -5,12 +5,12 @@
 /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
 /* { dg-options "-fno-zero-link" } */
 
-#include <Foundation/NSObject.h>
+#include <objc/Object.h>
 
 extern void abort(void);
 #define CHECK_IF(expr) if(!(expr)) abort();
 
-@interface Base: NSObject
+@interface Base: Object
 + (int) getValue;
 @end
 

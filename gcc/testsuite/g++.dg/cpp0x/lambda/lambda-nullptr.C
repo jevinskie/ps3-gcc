@@ -1,7 +1,7 @@
 // PR c++/54170
 // { dg-do run { target c++11 } }
 
-#include <cassert>
+#include <cassert> 
 
 struct A;
 typedef A* ptr;

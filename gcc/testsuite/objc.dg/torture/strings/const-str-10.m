@@ -6,10 +6,10 @@
 /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
 /* { dg-options "-mno-constant-cfstrings" { target *-*-darwin* } } */
 
-#include <Foundation/NSObject.h>
+#include <objc/Object.h>
 #include "../../../objc-obj-c++-shared/runtime.h" /* For NEXT_OBJC_USE_NEW_INTERFACE.  */
 
-@interface NSString: NSObject
+@interface NSString: Object
 @end
 
 @interface NSSimpleCString : NSString {

@@ -1,6 +1,5 @@
 /* 128-bit long double support routines for Darwin.
-   Copyright (C) 1993, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1993-2013 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -189,16 +188,7 @@ __gcc_qdiv (double a, double b, double c, double d)
       || nonfinite (t))
     return t;
 
-  /* Finite nonzero result requires corrections to the highest order
-     term.  These corrections require the low part of c * t to be
-     exactly represented in double.  */
-  if (fabs (a) <= 0x1p-969)
-    {
-      a *= 0x1p106;
-      b *= 0x1p106;
-      c *= 0x1p106;
-      d *= 0x1p106;
-    }
+  /* Finite nonzero result requires corrections to the highest order term.  */
 
   s = c * t;                    /* (s,sigma) = c*t exactly.  */
   w = -(-b + d * t);	/* Written to get fnmsub for speed, but not

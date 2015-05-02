@@ -4,9 +4,9 @@
 /* { dg-do compile { target { *-*-darwin* } } } */
 /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
 
-#include <Foundation/NSObject.h>
+#include <objc/Object.h>
 
-@interface Base: NSObject 
+@interface Base: Object 
 - (void)setValues;
 @end
 
