@@ -1222,6 +1222,13 @@ static void rs6000_print_isa_options (FILE *, int, const char *,
 static void rs6000_print_builtin_options (FILE *, int, const char *,
 					  HOST_WIDE_INT);
 
+
+#ifdef POWERPC_CELL64LV2
+
+static bool rs6000_cell64lv2_valid_pointer_mode(enum machine_mode);
+
+#endif
+
 static enum rs6000_reg_type register_to_reg_type (rtx, bool *);
 static bool rs6000_secondary_reload_move (enum rs6000_reg_type,
 					  enum rs6000_reg_type,
@@ -33264,6 +33271,11 @@ rs6000_set_up_by_prologue (struct hard_reg_set_container *set)
     add_to_hard_reg_set (&set->set, Pmode, RS6000_PIC_OFFSET_TABLE_REGNUM);
 }
 
+#ifdef POWERPC_CELL64LV2
+#undef TARGET_VALID_POINTER_MODE
+#define TARGET_VALID_POINTER_MODE rs6000_cell64lv2_valid_pointer_mode
+#endif
+
 
 /* Helper function for rs6000_split_logical to emit a logical instruction after
    spliting the operation to single GPR registers.
@@ -35208,5 +35220,14 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
 
 
 struct gcc_target targetm = TARGET_INITIALIZER;
+
+#ifdef POWERPC_CELL64LV2
+
+static bool rs6000_cell64lv2_valid_pointer_mode(enum machine_mode mode)
+{
+	return (mode == SImode || (TARGET_64BIT && mode == DImode) || mode == ptr_mode || mode == Pmode);
+}
+
+#endif
 
 #include "gt-rs6000.h"
