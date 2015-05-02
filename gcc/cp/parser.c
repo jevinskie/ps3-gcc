@@ -1,6 +1,6 @@
 /* C++ Parser.
    Copyright (C) 2000, 2001, 2002, 2003, 2004,
-   2005, 2007, 2008, 2009, 2010, 2011  Free Software Foundation, Inc.
+   2005, 2007, 2008, 2009, 2010, 2011, 2012  Free Software Foundation, Inc.
    Written by Mark Mitchell <mark@codesourcery.com>.
 
    This file is part of GCC.
@@ -2007,7 +2007,7 @@ static tree cp_parser_class_name
 static tree cp_parser_class_specifier
   (cp_parser *);
 static tree cp_parser_class_head
-  (cp_parser *, bool *, tree *, tree *);
+  (cp_parser *, bool *, tree *);
 static enum tag_types cp_parser_class_key
   (cp_parser *);
 static void cp_parser_member_specification_opt
@@ -3581,7 +3581,13 @@ lookup_literal_operator (tree name, VEC(tree,gc) *args)
 				       TREE_TYPE (tparm))))
 		found = false;
 	    }
-	  if (found)
+	  if (found
+	      && ix == VEC_length (tree, args)
+	      /* May be this should be sufficient_parms_p instead,
+		 depending on how exactly should user-defined literals
+		 work in presence of default arguments on the literal
+		 operator parameters.  */
+	      && argtypes == void_list_node)
 	    return fn;
 	}
     }
@@ -7269,6 +7275,9 @@ cp_parser_binary_expression (cp_parser* parser, bool cast_p,
   /* Parse the first expression.  */
   lhs = cp_parser_cast_expression (parser, /*address_p=*/false, cast_p, pidk);
   lhs_type = ERROR_MARK;
+
+  if (cp_parser_error_occurred (parser))
+    return error_mark_node;
 
   for (;;)
     {
@@ -17835,6 +17844,8 @@ cp_parser_class_name (cp_parser *parser,
 	decl = TYPE_NAME (decl);
     }
 
+  decl = strip_using_decl (decl);
+
   /* Check to see that it is really the name of a class.  */
   if (TREE_CODE (decl) == TEMPLATE_ID_EXPR
       && TREE_CODE (TREE_OPERAND (decl, 0)) == IDENTIFIER_NODE
@@ -17900,7 +17911,6 @@ cp_parser_class_specifier_1 (cp_parser* parser)
   /* Parse the class-head.  */
   type = cp_parser_class_head (parser,
 			       &nested_name_specifier_p,
-			       &attributes,
 			       &bases);
   /* If the class-head was a semantic disaster, skip the entire body
      of the class.  */
@@ -17959,7 +17969,7 @@ cp_parser_class_specifier_1 (cp_parser* parser)
       scope = CP_DECL_CONTEXT (TYPE_MAIN_DECL (type));
       old_scope = push_inner_scope (scope);
     }
-  type = begin_class_definition (type, attributes);
+  type = begin_class_definition (type);
 
   if (type == error_mark_node)
     /* If the type is erroneous, skip the entire body of the class.  */
@@ -18216,7 +18226,6 @@ cp_parser_class_specifier (cp_parser* parser)
 static tree
 cp_parser_class_head (cp_parser* parser,
 		      bool* nested_name_specifier_p,
-		      tree *attributes_p,
 		      tree *bases)
 {
   tree nested_name_specifier;
@@ -18584,6 +18593,14 @@ cp_parser_class_head (cp_parser* parser,
   else if (type == error_mark_node)
     type = NULL_TREE;
 
+  if (type)
+    {
+      /* Apply attributes now, before any use of the class as a template
+	 argument in its base list.  */
+      cplus_decl_attributes (&type, attributes, (int)ATTR_FLAG_TYPE_IN_PLACE);
+      fixup_attribute_variants (type);
+    }
+
   /* We will have entered the scope containing the class; the names of
      base classes should be looked up in that context.  For example:
 
@@ -18610,7 +18627,6 @@ cp_parser_class_head (cp_parser* parser,
 
   if (type)
     DECL_SOURCE_LOCATION (TYPE_NAME (type)) = type_start_token->location;
-  *attributes_p = attributes;
   if (type && (virt_specifiers & VIRT_SPEC_FINAL))
     CLASSTYPE_FINAL (type) = 1;
  out:
@@ -19097,7 +19113,7 @@ cp_parser_member_declaration (cp_parser* parser)
 		     possible that this fact is an oversight in the
 		     standard, since a pure function may be defined
 		     outside of the class-specifier.  */
-		  if (initializer)
+		  if (initializer && initializer_token_start)
 		    error_at (initializer_token_start->location,
 			      "pure-specifier on function-definition");
 		  decl = cp_parser_save_member_function_body (parser,
